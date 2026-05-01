@@ -243,6 +243,9 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 .nfce-table td{padding:8px;border-bottom:1px solid var(--border)}
 .nfce-table tr:last-child td{border-bottom:none}
 .nfce-table input[type=number]{width:60px;padding:4px;border:1px solid var(--border);border-radius:6px;text-align:center}
+.nfce-table input[type=text]{width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;background:var(--card);color:var(--text)}
+.nfce-marca-input{font-size:.75rem!important;color:var(--text-light)!important;margin-top:3px;border-color:transparent!important}
+.nfce-marca-input:focus,.nfce-marca-input:hover{border-color:var(--border)!important}
 .nfce-table select{padding:4px;border:1px solid var(--border);border-radius:6px;max-width:80px}
 
 /* Add item modal */
@@ -1232,9 +1235,11 @@ const ABREV_MAP = [
   ['ACHOC',          'Achocolatado'],
   ['BEB VEG',        'Bebida Vegetal'],
   ['REFRIGER',       'Refrigerante'],
+  ['AROM',           'Aromatizante'],
   // Laticínios
   ['CR LEI',         'Creme de Leite'],
   ['L COCO',         'Leite de Coco'],
+  ['L COND',         'Leite Condensado'],
   ['L PO',           'Leite em Pó'],
   ['LTE INT',        'Leite Integral'],
   ['LEITE COND',     'Leite Condensado'],
@@ -1243,21 +1248,27 @@ const ABREV_MAP = [
   ['MUSS',           'Mussarela'],
   ['RQ CREM',        'Requeijão Cremoso'],
   ['REQUEIJ',        'Requeijão'],
-  // Carnes
+  // Carnes / Aves
   ['CARNE BOV',      'Carne Bovina'],
   ['CARNE MOL',      'Carne Moída'],
+  ['COXINHA ASA',    'Coxinha de Asa'],
   ['FG PASS',        'Frango Passarinha'],
+  ['FGO',            'Frango'],
   ['FRANGO INT',     'Frango Inteiro'],
   ['FRANGO',         'Frango'],
   ['HAMB',           'Hambúrguer'],
+  ['PTS',            'Proteína de Soja'],
   ['SOBREC',         'Sobrecoxa'],
-  // Queijos / Manteiga
+  // Queijos / Laticínios sólidos
   ['PARM RAL',       'Queijo Parmesão Ralado'],
   ['QUEIJO MOZ',     'Queijo Mozzarela'],
   ['MANT',           'Manteiga'],
   ['MANTEIG',        'Manteiga'],
   // Cereais / Grãos
+  ['AC MASC',        'Açúcar Mascavo'],
+  ['AC DEM',         'Açúcar Demerara'],
   ['ARR',            'Arroz'],
+  ['FEIJAO PTO',     'Feijão Preto'],
   ['FEIJAO C',       'Feijão Carioca'],
   ['FEIJAO P',       'Feijão Preto'],
   ['FEIJAO',         'Feijão'],
@@ -1266,14 +1277,17 @@ const ABREV_MAP = [
   ['F ROSCA',        'Farinha de Rosca'],
   ['F TR',           'Farinha de Trigo'],
   ['FARINHA MAND',   'Farinha de Mandioca'],
+  ['FM FLEISCH',     'Fermento Fleischmann'],
   ['FERM PO',        'Fermento em Pó'],
   ['GOM MAND',       'Goma de Mandioca'],
   ['POLV',           'Polvilho'],
-  // Massas / Temperos / Óleos
+  // Massas
   ['MACARRAO',       'Macarrão'],
   ['MACAR',          'Macarrão'],
   ['MACAX',          'Macaxeira'],
   ['MAC',            'Macarrão'],
+  ['PASTA AMENDO',   'Pasta de Amendoim'],
+  // Temperos / Óleos / Molhos
   ['MAION',          'Maionese'],
   ['AZ C',           'Azeitona'],
   ['AZ',             'Azeite'],
@@ -1303,6 +1317,7 @@ const ABREV_MAP = [
   ['AM COMF',        'Amaciante Confort'],
   ['CREME DENT',     'Creme Dental'],
   ['DET YPE',        'Detergente Ypê'],
+  ['DIF SECAR',      'Difusor de Secagem'],
   ['DETERG',         'Detergente'],
   ['DET ',           'Detergente '],
   ['ESM',            'Esmalte'],
@@ -1314,6 +1329,40 @@ const ABREV_MAP = [
   // Descartáveis
   ['PAPEL HIG',      'Papel Higiênico'],
   ['TOMATE PEL',     'Tomate Pelado'],
+];
+
+// Sufixos de variante — removidos do fim do nome e acrescentados ao produto
+const VARIANT_MAP = [
+  ['M AM',      'Meio Amargo'],
+  ['ESP',       'Espaguete'],
+  ['INT',       'Integral'],
+  ['TRAD',      'Tradicional'],
+  ['LAV',       'Lavanda'],
+  ['BAUN',      'Baunilha'],
+  ['CAST',      'Castanha'],
+  ['CR',        'Cremosa'],
+  ['CAMOMIL',   'Camomila'],
+  ['FGO',       'Frango'],
+  ['AL',        'Alcoólico'],
+  ['LIGHT',     'Light'],
+  ['DIET',      'Diet'],
+  ['ZERO',      'Zero'],
+  ['SC',        ''],
+  ['ACU',       ''],
+];
+
+// Abreviações de marcas conhecidas
+const BRAND_ABBREV_MAP = [
+  ['DALL SE',   "Dall'Anna"],
+  ['MARAT',     'Maratá'],
+  ['ITAM',      'Itambé'],
+  ['NATUQ',     'Natuquim'],
+  ['JJ',        'Johnson & Johnson'],
+  ['FLEISCH',   'Fleischmann'],
+  ['CEPER',     'Ceper'],
+  ['RISQUE',    'Risqué'],
+  ['SADIA',     'Sadia'],
+  ['POMAROLA',  'Pomarola'],
 ];
 
 // Mapeamento keyword (sem acento, minúsculo) → nome exato da categoria no banco
@@ -1357,34 +1406,103 @@ const CAT_MAP = [
     'saco lixo','filme pvc','papel alum'], 'Descartáveis e Outros'],
 ];
 
-function normalizarNome(raw) {
+function titleCase(s) {
+  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+}
+
+function parseProduto(raw) {
   let s = raw.trim().toUpperCase();
-  // Strip "500G", "1KG", "1,5L", "200ML" etc. at end
-  s = s.replace(/\s*\d+[\.,]?\d*\s*(KG|G|L|ML|LT|PCT|UN|PC|GR|UND|CX)$/i, '');
-  // Strip standalone unit at end " KG", " UN" etc.
-  s = s.replace(/\s+(KG|UN|LT|ML|PCT|PC|GR|G|L|FR|LA|UND|CX|FD|BD|SC|VD)$/i, '');
-  // Expand abbreviation: only when followed by space, end of string, or abrev ends with space
+
+  // 1. Strip qty+unit combos anywhere (e.g. "500G", "1,5L", "1K")
+  s = s.replace(/\b\d+[,.]?\d*\s*(KG|G|ML|L|LT|PCT|UN|GR|UND|CX|K)\b/gi, '');
+  // 2. Strip bare numbers at end (e.g. leftover "400" after unit already stripped)
+  s = s.replace(/\s+\d+\s*$/, '');
+  // 3. Clean up multiple spaces
+  s = s.replace(/\s+/g, ' ').trim();
+
+  // 4. Find and expand prefix abbreviation
+  let expandedPrefix = null;
+  let remainderAfterPrefix = '';
   for (const [abrev, expansao] of ABREV_MAP) {
     const a = abrev.toUpperCase();
-    if (s.startsWith(a) && (a.endsWith(' ') || s.length === a.length || s[a.length] === ' ')) {
-      s = expansao.toUpperCase() + s.slice(a.length);
+    if (s === a || (s.startsWith(a) && (a.endsWith(' ') || s[a.length] === ' '))) {
+      expandedPrefix = expansao.toUpperCase();
+      remainderAfterPrefix = s.slice(a.length).trim();
       break;
     }
   }
-  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+
+  // 5. No prefix match → return whole string as name, no brand
+  if (!expandedPrefix) {
+    return { nome: titleCase(s), marca: '' };
+  }
+
+  // 6. Split remaining tokens; strip variant suffixes from the END
+  const tokens = remainderAfterPrefix ? remainderAfterPrefix.split(/\s+/) : [];
+  const variantParts = [];
+  const remaining = [...tokens];
+
+  // Multi-word variants first
+  for (const [vk, vv] of VARIANT_MAP) {
+    if (!vk.includes(' ')) continue;
+    const vkWords = vk.split(/\s+/);
+    if (remaining.length >= vkWords.length) {
+      const tail = remaining.slice(-vkWords.length).join(' ');
+      if (tail === vk) {
+        if (vv) variantParts.unshift(vv);
+        remaining.splice(-vkWords.length);
+      }
+    }
+  }
+  // Single-word variants from end
+  let keepStripping = true;
+  while (keepStripping && remaining.length > 0) {
+    const last = remaining[remaining.length - 1];
+    const entry = VARIANT_MAP.find(([vk]) => !vk.includes(' ') && vk === last);
+    if (entry) {
+      if (entry[1]) variantParts.unshift(entry[1]);
+      remaining.pop();
+    } else {
+      keepStripping = false;
+    }
+  }
+
+  // 7. First token(s) of remaining = brand
+  let marca = '';
+  if (remaining.length > 0) {
+    const firstToken = remaining[0];
+    const brandEntry = BRAND_ABBREV_MAP.find(([bk]) => bk.toUpperCase() === firstToken);
+    if (brandEntry) {
+      marca = brandEntry[1];
+      // Remaining tokens after brand are extra variant words
+      const extra = remaining.slice(1);
+      if (extra.length > 0) variantParts.push(...extra.map(v => titleCase(v)));
+    } else {
+      marca = titleCase(remaining.join(' '));
+    }
+  }
+
+  // 8. Build final product name
+  const nomeParts = [expandedPrefix, ...variantParts.map(v => v.toUpperCase())].join(' ').trim();
+  return { nome: titleCase(nomeParts), marca };
+}
+
+function normalizarNome(raw) {
+  return parseProduto(raw).nome;
 }
 
 function deduplicarItens(itens) {
   const map = new Map();
   for (const it of itens) {
-    const nomeNorm = normalizarNome(it.nome);
-    if (map.has(nomeNorm)) {
-      const ex = map.get(nomeNorm);
+    const parsed = parseProduto(it.nome);
+    const key = parsed.nome;
+    if (map.has(key)) {
+      const ex = map.get(key);
       ex.quantidade     += it.quantidade;
       ex.preco_total    += it.preco_total;
       ex.preco_unitario  = ex.preco_total / ex.quantidade;
     } else {
-      map.set(nomeNorm, { ...it, nome: nomeNorm });
+      map.set(key, { ...it, nome: parsed.nome, marca: parsed.marca });
     }
   }
   return Array.from(map.values());
@@ -1417,9 +1535,13 @@ function mostrarConfirmacaoNFCe(dados) {
 
   document.getElementById('nfce-table-body').innerHTML = dados.itens.map((it, idx) => {
     const autoId = autoCategorizarItem(it.nome);
+    const marca = it.marca || '';
     return `
     <tr>
-      <td>${it.nome}</td>
+      <td>
+        <input type="text" id="nfce-nome-${idx}" value="${it.nome.replace(/"/g,'&quot;')}" placeholder="Nome do produto">
+        <input type="text" id="nfce-marca-${idx}" value="${marca.replace(/"/g,'&quot;')}" placeholder="marca" class="nfce-marca-input">
+      </td>
       <td><input type="number" value="${it.quantidade}" min="0.001" step="0.001" id="nfce-qty-${idx}"></td>
       <td><select id="nfce-un-${idx}">
         ${['UN','KG','G','PCT','L','PC','FR','LA'].map(u =>
@@ -1446,6 +1568,8 @@ async function confirmarCompra() {
 
   const itensAtualizados = nfceParsed.itens.map((it, idx) => ({
     ...it,
+    nome: document.getElementById(`nfce-nome-${idx}`)?.value.trim() || it.nome,
+    marca: document.getElementById(`nfce-marca-${idx}`)?.value.trim() || '',
     quantidade: parseFloat(document.getElementById(`nfce-qty-${idx}`).value) || it.quantidade,
     unidade: document.getElementById(`nfce-un-${idx}`).value || it.unidade,
     categoria_id: document.getElementById(`nfce-cat-${idx}`).value || null,
@@ -1479,6 +1603,7 @@ async function confirmarCompra() {
     compra_id: compra.id,
     categoria_id: it.categoria_id || null,
     nome_original: it.nome,
+    marca: it.marca || null,
     quantidade: it.quantidade,
     unidade: it.unidade,
     preco_unitario: it.preco_unitario,

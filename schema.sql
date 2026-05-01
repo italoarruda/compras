@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS itens_compra (
   produto_id     UUID REFERENCES produtos(id),
   categoria_id   UUID REFERENCES categorias(id),
   nome_original  TEXT NOT NULL,
+  marca          TEXT,
   quantidade     DECIMAL(10,3),
   unidade        TEXT,
   preco_unitario DECIMAL(10,2),
