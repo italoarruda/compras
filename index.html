@@ -276,6 +276,25 @@ input,select,textarea{font-family:inherit;font-size:inherit}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading-full{display:flex;align-items:center;justify-content:center;height:200px}
 
+/* ===== PROGRESS NFC-e ===== */
+#nfce-loader{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--card);border-top:1px solid var(--border);
+  padding:12px 20px 18px;z-index:9998;
+  box-shadow:0 -4px 24px rgba(0,0,0,.15);
+  display:none;
+}
+#nfce-loader-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+#nfce-loader-msg{font-size:.82rem;color:var(--text-light)}
+#nfce-loader-pct{font-size:.82rem;font-weight:700;color:var(--primary)}
+#nfce-loader-track{height:8px;background:var(--border);border-radius:99px;overflow:hidden}
+#nfce-loader-bar{
+  height:100%;width:0%;border-radius:99px;
+  background:linear-gradient(90deg,var(--primary),var(--accent));
+  transition:width .45s cubic-bezier(.4,0,.2,1);
+}
+#nfce-loader-bar.fail{background:var(--danger)}
+
 /* ===== UTILS ===== */
 .hidden{display:none!important}
 .mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-16{margin-top:16px}
@@ -594,6 +613,15 @@ html.dark option{background:#1a1d27;color:var(--text)}
 
 <!-- Toast -->
 <div id="toast"></div>
+
+<!-- Barra de progresso NFC-e -->
+<div id="nfce-loader">
+  <div id="nfce-loader-header">
+    <span id="nfce-loader-msg">Buscando nota fiscal...</span>
+    <span id="nfce-loader-pct">0%</span>
+  </div>
+  <div id="nfce-loader-track"><div id="nfce-loader-bar"></div></div>
+</div>
 
 <!-- ============================================================ -->
 <!--  SCRIPT                                                       -->
@@ -1014,8 +1042,30 @@ function processNFCeFromInput() {
   processNFCeURL(url);
 }
 
+function nfceProgress(pct, msg) {
+  const loader = document.getElementById('nfce-loader');
+  loader.style.display = 'block';
+  document.getElementById('nfce-loader-bar').classList.remove('fail');
+  document.getElementById('nfce-loader-bar').style.width = pct + '%';
+  document.getElementById('nfce-loader-pct').textContent = pct + '%';
+  if (msg) document.getElementById('nfce-loader-msg').textContent = msg;
+}
+
+function nfceProgressDone(msg) {
+  nfceProgress(100, msg || 'Pronto!');
+  setTimeout(() => { document.getElementById('nfce-loader').style.display = 'none'; }, 900);
+}
+
+function nfceProgressFail(msg) {
+  document.getElementById('nfce-loader-bar').classList.add('fail');
+  document.getElementById('nfce-loader-bar').style.width = '100%';
+  document.getElementById('nfce-loader-pct').textContent = '—';
+  document.getElementById('nfce-loader-msg').textContent = msg || 'Falha ao buscar nota';
+  setTimeout(() => { document.getElementById('nfce-loader').style.display = 'none'; }, 2500);
+}
+
 async function processNFCeURL(url) {
-  toast('Buscando nota fiscal...', 'info');
+  nfceProgress(5, 'Conectando ao SEFAZ...');
 
   const chave    = extractChaveNFCe(url);
   // Garante que %7C seja decodificado para | antes de repassar para proxies
@@ -1024,6 +1074,7 @@ async function processNFCeURL(url) {
 
   // ── 1. Supabase Edge Function (mais confiável — servidor para servidor) ──
   if (NFCE_FUNCTION_URL) {
+    nfceProgress(15, 'Consultando servidor...');
     try {
       const res = await fetch(NFCE_FUNCTION_URL, {
         method: 'POST',
@@ -1032,8 +1083,13 @@ async function processNFCeURL(url) {
         signal: AbortSignal.timeout(20000)
       });
       if (res.ok) {
+        nfceProgress(85, 'Processando itens...');
         const dados = await res.json();
-        if (dados?.itens?.length) { mostrarConfirmacaoNFCe(dados); return; }
+        if (dados?.itens?.length) {
+          nfceProgressDone(`${dados.itens.length} itens encontrados!`);
+          mostrarConfirmacaoNFCe(dados);
+          return;
+        }
       }
     } catch(e) { console.warn('[NFC-e] Edge function falhou:', e); }
   }
@@ -1048,7 +1104,9 @@ async function processNFCeURL(url) {
   ];
 
   let html = null;
-  for (const proxy of proxies) {
+  for (let i = 0; i < proxies.length; i++) {
+    const proxy = proxies[i];
+    nfceProgress(15 + Math.round((i / proxies.length) * 70), `Buscando via proxy ${i + 1}/${proxies.length}...`);
     try {
       const res = await fetch(proxy.url, { signal: AbortSignal.timeout(18000) });
       if (!res.ok) { console.warn('[NFC-e] proxy retornou', res.status, proxy.url); continue; }
@@ -1067,16 +1125,20 @@ async function processNFCeURL(url) {
   }
 
   if (!html) {
+    nfceProgressFail('Não foi possível buscar a nota.');
     toast('Não foi possível buscar a nota. Verifique sua conexão ou use a Edge Function.', 'error');
     return;
   }
 
+  nfceProgress(92, 'Identificando produtos...');
   const dados = parseNFCeHTML(html, chave, url);
   if (!dados?.itens?.length) {
+    nfceProgressFail('Produtos não encontrados.');
     toast('HTML obtido mas nenhum produto encontrado. Abra o console (F12) para detalhes.', 'error');
     console.error('[NFC-e] HTML recebido:', html.slice(0, 2000));
     return;
   }
+  nfceProgressDone(`${dados.itens.length} itens encontrados!`);
   mostrarConfirmacaoNFCe(dados);
 }
 
@@ -1156,9 +1218,137 @@ function formatQty(v) {
 }
 
 // ================================================================
+//  NORMALIZAÇÃO E AUTO-CATEGORIZAÇÃO DE ITENS NFC-e
+// ================================================================
+
+// Prefixos truncados mais comuns do SEFAZ AM → forma expandida (mais específico primeiro)
+const ABREV_MAP = [
+  ['ACHOC',        'Achocolatado'],
+  ['ACUC',         'Açúcar'],
+  ['AGUA M',       'Água Mineral'],
+  ['CARNE BOV',    'Carne Bovina'],
+  ['CARNE MOL',    'Carne Moída'],
+  ['CHEIRO V',     'Cheiro Verde'],
+  ['CREME DENT',   'Creme Dental'],
+  ['DETERG',       'Detergente'],
+  ['DET ',         'Detergente '],
+  ['EXTRATO TOM',  'Extrato de Tomate'],
+  ['FARINHA MAND', 'Farinha de Mandioca'],
+  ['FEIJAO C',     'Feijão Carioca'],
+  ['FEIJAO P',     'Feijão Preto'],
+  ['FEIJAO',       'Feijão'],
+  ['FRANGO INT',   'Frango Inteiro'],
+  ['LEITE COND',   'Leite Condensado'],
+  ['LEITE C ',     'Leite Condensado '],
+  ['LEITE INT',    'Leite Integral'],
+  ['LEITE',        'Leite'],
+  ['LARAN',        'Laranja'],
+  ['MACAR',        'Macarrão'],
+  ['MACAX',        'Macaxeira'],
+  ['MANTEIG',      'Manteiga'],
+  ['MANTE ',       'Manteiga '],
+  ['MOLHO TOM',    'Molho de Tomate'],
+  ['OLEO SOJA',    'Óleo de Soja'],
+  ['OLEO SOJ',     'Óleo de Soja'],
+  ['PAO DE FORM',  'Pão de Forma'],
+  ['PAPEL HIG',    'Papel Higiênico'],
+  ['PIMENT',       'Pimentão'],
+  ['QUEIJO MOZ',   'Queijo Mozzarela'],
+  ['REFRIGER',     'Refrigerante'],
+  ['REQUEIJ',      'Requeijão'],
+  ['SAB EM PO',    'Sabão em Pó'],
+  ['SAB PO',       'Sabão em Pó'],
+  ['SOBREC',       'Sobrecoxa'],
+  ['TOMATE PEL',   'Tomate Pelado'],
+  ['VINAG',        'Vinagre'],
+];
+
+// Mapeamento keyword (sem acento, minúsculo) → nome exato da categoria no banco
+const CAT_MAP = [
+  [['banana','laranja','manga','uva','mamao','abacaxi','caju','goiaba','limao',
+    'abacate','morango','maracuja','pera','maca','ameixa','melancia','melao','coco',
+    'acerola','jaca','graviola','cupuacu'], 'Frutas'],
+  [['alface','couve','brocolis','espinafre','cebolinha','cheiro verde',
+    'coentro','salsa','rucula','hortela','repolho'], 'Verduras e Ervas'],
+  [['batata','cenoura','cebola','pimentao','abobrinha','beterraba','pepino',
+    'berinjela','mandioca','macaxeira','inhame','chuchu','quiabo','jilo',
+    'tomate'], 'Legumes'],
+  [['picanha','alcatra','contrafile','patinho','fraldinha','acem','musculo',
+    'coxao','costela','bife','file mig','carne bov','carne mol'], 'Carnes Bovinas'],
+  [['frango','peito de','coxa de','sobrecoxa','galinha','chester','peru','asa de'], 'Aves'],
+  [['camarao','salmao','tilapia','bacalhau','merluza','peixe'], 'Peixes e Frutos do Mar'],
+  [['leite','queijo','manteiga','iogurte','requeijao','mussarela','cottage',
+    'ricota','cream cheese','creme de leite','nata'], 'Laticínios'],
+  [['salsicha','linguica','presunto','mortadela','bacon','copa','calabresa',
+    'pepperoni','blanquet'], 'Embutidos e Frios'],
+  [['ovos','ovo '], 'Ovos'],
+  [['arroz','feijao','milho verde','aveia','grao de bico','lentilha','grao'], 'Grãos e Cereais'],
+  [['farinha','amido','maisena','polvilho','fuba','tapioca'], 'Farinhas e Amidos'],
+  [['macarrao','espaguete','penne','lasanha','talharim','massa'], 'Massas'],
+  [['sal fin','acucar','oleo de','oleo soja','vinagre','ketchup','mostarda',
+    'maionese','azeite','molho','tempero','colorau','cominho','pimenta',
+    'alho em','canela','extrato tom','caldo'], 'Temperos e Condimentos'],
+  [['atum','sardinha','milho enl','ervilha','palmito','azeitona','cogumelo',
+    'seleta'], 'Enlatados e Conservas'],
+  [['agua mineral','suco','refrigerante','cerveja','vinho','achocolatado',
+    'cafe ','cha ','energetico','isoton','agua com gas'], 'Bebidas'],
+  [['biscoito','bolacha','pao ','bolo','chocolate','sorvete','bala',
+    'chiclete','wafer','chips','salgadinho'], 'Lanches e Guloseimas'],
+  [['sabao','detergente','amaciante','desinfetante','agua sanitaria','cera',
+    'esponja','vassoura','rodo','ype','flash limp','limpa','tira man',
+    'brilhante'], 'Limpeza'],
+  [['shampoo','condicionador','creme dental','pasta dental','escova dental',
+    'absorvente','fralda','sabonete','desodorante','perfume','locao',
+    'protetor solar'], 'Higiene Pessoal'],
+  [['papel higie','papel toalha','guardanapo','copos desc','prato desc',
+    'saco lixo','filme pvc','papel alum'], 'Descartáveis e Outros'],
+];
+
+function normalizarNome(raw) {
+  let s = raw.trim().toUpperCase()
+    .replace(/\s+(KG|UN|LT|ML|PCT|PC|GR|G\b|L\b|FR|LA|UND|CX|FD|BD|SC|VD)$/i, '');
+  for (const [abrev, expansao] of ABREV_MAP) {
+    if (s.startsWith(abrev.toUpperCase())) {
+      s = expansao.toUpperCase() + s.slice(abrev.length);
+      break;
+    }
+  }
+  return s.toLowerCase().replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+}
+
+function deduplicarItens(itens) {
+  const map = new Map();
+  for (const it of itens) {
+    const nomeNorm = normalizarNome(it.nome);
+    if (map.has(nomeNorm)) {
+      const ex = map.get(nomeNorm);
+      ex.quantidade     += it.quantidade;
+      ex.preco_total    += it.preco_total;
+      ex.preco_unitario  = ex.preco_total / ex.quantidade;
+    } else {
+      map.set(nomeNorm, { ...it, nome: nomeNorm });
+    }
+  }
+  return Array.from(map.values());
+}
+
+function autoCategorizarItem(nome) {
+  const strip = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const norm = strip(nome) + ' ';
+  for (const [keywords, catNome] of CAT_MAP) {
+    if (keywords.some(k => norm.includes(k))) {
+      const cat = allCategorias.find(c => strip(c.nome) === strip(catNome));
+      return cat?.id ?? '';
+    }
+  }
+  return '';
+}
+
+// ================================================================
 //  CONFIRMAR NFC-e
 // ================================================================
 function mostrarConfirmacaoNFCe(dados) {
+  dados = { ...dados, itens: deduplicarItens(dados.itens) };
   nfceParsed = dados;
 
   document.getElementById('nfce-info').innerHTML = `
@@ -1167,7 +1357,9 @@ function mostrarConfirmacaoNFCe(dados) {
     ${dados.data ? `<p>Data: ${dados.data}</p>` : ''}
     <p>Total: <strong>${formatMoeda(dados.total)}</strong> &nbsp;|&nbsp; ${dados.itens.length} itens</p>`;
 
-  document.getElementById('nfce-table-body').innerHTML = dados.itens.map((it, idx) => `
+  document.getElementById('nfce-table-body').innerHTML = dados.itens.map((it, idx) => {
+    const autoId = autoCategorizarItem(it.nome);
+    return `
     <tr>
       <td>${it.nome}</td>
       <td><input type="number" value="${it.quantidade}" min="0.001" step="0.001" id="nfce-qty-${idx}"></td>
@@ -1179,10 +1371,13 @@ function mostrarConfirmacaoNFCe(dados) {
       <td>${formatMoeda(it.preco_unitario)}</td>
       <td>${formatMoeda(it.preco_total)}</td>
       <td><select id="nfce-cat-${idx}">
-        <option value="">— auto —</option>
-        ${allCategorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('')}
+        <option value="">— sem categoria —</option>
+        ${allCategorias.map(c =>
+          `<option value="${c.id}"${c.id === autoId ? ' selected' : ''}>${c.nome}</option>`
+        ).join('')}
       </select></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   openModal('modal-nfce');
 }
