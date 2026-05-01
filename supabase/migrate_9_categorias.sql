@@ -73,21 +73,15 @@ BEGIN
   UPDATE produtos     SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
   UPDATE itens_compra SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
 
-  -- "Higiene Pessoal" renomeia no lugar (mantém o ID, evita recriar)
-  UPDATE categorias SET nome = 'Higiene e Cuidados', cor = '#1abc9c', ordem = 90
-    WHERE nome = 'Higiene Pessoal';
-
-  -- "Lanches e Guloseimas" renomeia no lugar
-  UPDATE categorias SET nome = 'Padaria e Doces', cor = '#f39c12', icone = '🍫', ordem = 70
-    WHERE nome = 'Lanches e Guloseimas';
-
-  -- Remove categorias antigas que foram consolidadas
+  -- Remove todas as categorias antigas (as novas já foram inseridas no passo 1)
   DELETE FROM categorias WHERE nome IN (
     'Frutas','Legumes','Verduras e Ervas',
     'Carnes Bovinas','Aves','Peixes e Frutos do Mar',
     'Embutidos e Frios','Ovos',
     'Grãos e Cereais','Farinhas e Amidos','Massas',
     'Enlatados e Conservas',
+    'Lanches e Guloseimas',
+    'Higiene Pessoal',
     'Descartáveis e Outros'
   );
 
