@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS itens_compra (
   unidade        TEXT,
   preco_unitario DECIMAL(10,2),
   preco_total    DECIMAL(10,2),
+  fora_da_lista  BOOLEAN DEFAULT FALSE,
   criado_em      TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_itens_compra ON itens_compra(compra_id);

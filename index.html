@@ -436,6 +436,7 @@ html.dark option{background:#1a1d27;color:var(--text)}
       <div class="stat-card"><div class="value" id="dash-itens">0</div><div class="label">Produtos</div></div>
       <div class="stat-card"><div class="value" id="dash-compras">0</div><div class="label">Visitas ao mercado</div></div>
       <div class="stat-card"><div class="value" id="dash-ticket">R$ 0,00</div><div class="label">Ticket médio</div></div>
+      <div class="stat-card" style="border-top:2px solid var(--danger)"><div class="value" id="dash-extras" style="color:var(--danger)">R$ 0,00</div><div class="label">Extras (fora da lista)</div></div>
     </div>
 
     <div class="chart-card">
@@ -539,6 +540,7 @@ html.dark option{background:#1a1d27;color:var(--text)}
               <th>Unitário</th>
               <th>Total</th>
               <th>Categoria</th>
+              <th title="Marque se o produto não estava na lista oficial">Extra?</th>
             </tr>
           </thead>
           <tbody id="nfce-table-body"></tbody>
@@ -1221,46 +1223,97 @@ function formatQty(v) {
 //  NORMALIZAÇÃO E AUTO-CATEGORIZAÇÃO DE ITENS NFC-e
 // ================================================================
 
-// Prefixos truncados mais comuns do SEFAZ AM → forma expandida (mais específico primeiro)
+// Abreviações e palavras SEFAZ AM → forma completa (mais específico primeiro).
+// Match: startsWith + (seguido de espaço | fim de string | abrev termina em espaço)
 const ABREV_MAP = [
-  ['ACHOC',        'Achocolatado'],
-  ['ACUC',         'Açúcar'],
-  ['AGUA M',       'Água Mineral'],
-  ['CARNE BOV',    'Carne Bovina'],
-  ['CARNE MOL',    'Carne Moída'],
-  ['CHEIRO V',     'Cheiro Verde'],
-  ['CREME DENT',   'Creme Dental'],
-  ['DETERG',       'Detergente'],
-  ['DET ',         'Detergente '],
-  ['EXTRATO TOM',  'Extrato de Tomate'],
-  ['FARINHA MAND', 'Farinha de Mandioca'],
-  ['FEIJAO C',     'Feijão Carioca'],
-  ['FEIJAO P',     'Feijão Preto'],
-  ['FEIJAO',       'Feijão'],
-  ['FRANGO INT',   'Frango Inteiro'],
-  ['LEITE COND',   'Leite Condensado'],
-  ['LEITE C ',     'Leite Condensado '],
-  ['LEITE INT',    'Leite Integral'],
-  ['LEITE',        'Leite'],
-  ['LARAN',        'Laranja'],
-  ['MACAR',        'Macarrão'],
-  ['MACAX',        'Macaxeira'],
-  ['MANTEIG',      'Manteiga'],
-  ['MANTE ',       'Manteiga '],
-  ['MOLHO TOM',    'Molho de Tomate'],
-  ['OLEO SOJA',    'Óleo de Soja'],
-  ['OLEO SOJ',     'Óleo de Soja'],
-  ['PAO DE FORM',  'Pão de Forma'],
-  ['PAPEL HIG',    'Papel Higiênico'],
-  ['PIMENT',       'Pimentão'],
-  ['QUEIJO MOZ',   'Queijo Mozzarela'],
-  ['REFRIGER',     'Refrigerante'],
-  ['REQUEIJ',      'Requeijão'],
-  ['SAB EM PO',    'Sabão em Pó'],
-  ['SAB PO',       'Sabão em Pó'],
-  ['SOBREC',       'Sobrecoxa'],
-  ['TOMATE PEL',   'Tomate Pelado'],
-  ['VINAG',        'Vinagre'],
+  // Água / Bebidas
+  ['AG SANIT',       'Água Sanitária'],
+  ['AGUA M',         'Água Mineral'],
+  ['ACHOC',          'Achocolatado'],
+  ['BEB VEG',        'Bebida Vegetal'],
+  ['REFRIGER',       'Refrigerante'],
+  // Laticínios
+  ['CR LEI',         'Creme de Leite'],
+  ['L COCO',         'Leite de Coco'],
+  ['L PO',           'Leite em Pó'],
+  ['LTE INT',        'Leite Integral'],
+  ['LEITE COND',     'Leite Condensado'],
+  ['LEITE INT',      'Leite Integral'],
+  ['LEITE',          'Leite'],
+  ['MUSS',           'Mussarela'],
+  ['RQ CREM',        'Requeijão Cremoso'],
+  ['REQUEIJ',        'Requeijão'],
+  // Carnes
+  ['CARNE BOV',      'Carne Bovina'],
+  ['CARNE MOL',      'Carne Moída'],
+  ['FG PASS',        'Frango Passarinha'],
+  ['FRANGO INT',     'Frango Inteiro'],
+  ['FRANGO',         'Frango'],
+  ['HAMB',           'Hambúrguer'],
+  ['SOBREC',         'Sobrecoxa'],
+  // Queijos / Manteiga
+  ['PARM RAL',       'Queijo Parmesão Ralado'],
+  ['QUEIJO MOZ',     'Queijo Mozzarela'],
+  ['MANT',           'Manteiga'],
+  ['MANTEIG',        'Manteiga'],
+  // Cereais / Grãos
+  ['ARR',            'Arroz'],
+  ['FEIJAO C',       'Feijão Carioca'],
+  ['FEIJAO P',       'Feijão Preto'],
+  ['FEIJAO',         'Feijão'],
+  ['FEIJ',           'Feijão'],
+  // Farinhas / Amidos
+  ['F ROSCA',        'Farinha de Rosca'],
+  ['F TR',           'Farinha de Trigo'],
+  ['FARINHA MAND',   'Farinha de Mandioca'],
+  ['FERM PO',        'Fermento em Pó'],
+  ['GOM MAND',       'Goma de Mandioca'],
+  ['POLV',           'Polvilho'],
+  // Massas / Temperos / Óleos
+  ['MACARRAO',       'Macarrão'],
+  ['MACAR',          'Macarrão'],
+  ['MACAX',          'Macaxeira'],
+  ['MAC',            'Macarrão'],
+  ['MAION',          'Maionese'],
+  ['AZ C',           'Azeitona'],
+  ['AZ',             'Azeite'],
+  ['EXTRATO TOM',    'Extrato de Tomate'],
+  ['M POMAROLA',     'Molho de Tomate Pomarola'],
+  ['MOLHO TOM',      'Molho de Tomate'],
+  ['OL SJ',          'Óleo de Soja'],
+  ['OLEO SOJA',      'Óleo de Soja'],
+  ['OLEO SOJ',       'Óleo de Soja'],
+  ['VINAGRERE',      'Vinagre'],
+  ['VINAG',          'Vinagre'],
+  ['LARAN',          'Laranja'],
+  ['PIMENT',         'Pimentão'],
+  // Enlatados
+  ['LEG ERV',        'Ervilha'],
+  ['SARD',           'Sardinha'],
+  // Padaria / Doces / Lanches
+  ['BISC ARR',       'Biscoito de Arroz'],
+  ['COBERTOP',       'Cobertura de Chocolate'],
+  ['PAC DA COL',     'Paçoca da Colônia'],
+  ['PAO DE FORM',    'Pão de Forma'],
+  // Legumes / Verduras
+  ['BAT EUDOR',      'Batata'],
+  ['CHEIRO V',       'Cheiro Verde'],
+  ['ACUC',           'Açúcar'],
+  // Higiene / Limpeza
+  ['AM COMF',        'Amaciante Confort'],
+  ['CREME DENT',     'Creme Dental'],
+  ['DET YPE',        'Detergente Ypê'],
+  ['DETERG',         'Detergente'],
+  ['DET ',           'Detergente '],
+  ['ESM',            'Esmalte'],
+  ['OLA',            'Sabão de Coco Líquido'],
+  ['SAB EM PO',      'Sabão em Pó'],
+  ['SAB PO',         'Sabão em Pó'],
+  ['SBT',            'Sabonete'],
+  ['VASS',           'Vassoura'],
+  // Descartáveis
+  ['PAPEL HIG',      'Papel Higiênico'],
+  ['TOMATE PEL',     'Tomate Pelado'],
 ];
 
 // Mapeamento keyword (sem acento, minúsculo) → nome exato da categoria no banco
@@ -1305,11 +1358,16 @@ const CAT_MAP = [
 ];
 
 function normalizarNome(raw) {
-  let s = raw.trim().toUpperCase()
-    .replace(/\s+(KG|UN|LT|ML|PCT|PC|GR|G\b|L\b|FR|LA|UND|CX|FD|BD|SC|VD)$/i, '');
+  let s = raw.trim().toUpperCase();
+  // Strip "500G", "1KG", "1,5L", "200ML" etc. at end
+  s = s.replace(/\s*\d+[\.,]?\d*\s*(KG|G|L|ML|LT|PCT|UN|PC|GR|UND|CX)$/i, '');
+  // Strip standalone unit at end " KG", " UN" etc.
+  s = s.replace(/\s+(KG|UN|LT|ML|PCT|PC|GR|G|L|FR|LA|UND|CX|FD|BD|SC|VD)$/i, '');
+  // Expand abbreviation: only when followed by space, end of string, or abrev ends with space
   for (const [abrev, expansao] of ABREV_MAP) {
-    if (s.startsWith(abrev.toUpperCase())) {
-      s = expansao.toUpperCase() + s.slice(abrev.length);
+    const a = abrev.toUpperCase();
+    if (s.startsWith(a) && (a.endsWith(' ') || s.length === a.length || s[a.length] === ' ')) {
+      s = expansao.toUpperCase() + s.slice(a.length);
       break;
     }
   }
@@ -1376,6 +1434,7 @@ function mostrarConfirmacaoNFCe(dados) {
           `<option value="${c.id}"${c.id === autoId ? ' selected' : ''}>${c.nome}</option>`
         ).join('')}
       </select></td>
+      <td style="text-align:center"><input type="checkbox" id="nfce-extra-${idx}" style="width:18px;height:18px;cursor:pointer"></td>
     </tr>`;
   }).join('');
 
@@ -1389,7 +1448,8 @@ async function confirmarCompra() {
     ...it,
     quantidade: parseFloat(document.getElementById(`nfce-qty-${idx}`).value) || it.quantidade,
     unidade: document.getElementById(`nfce-un-${idx}`).value || it.unidade,
-    categoria_id: document.getElementById(`nfce-cat-${idx}`).value || null
+    categoria_id: document.getElementById(`nfce-cat-${idx}`).value || null,
+    fora_da_lista: document.getElementById(`nfce-extra-${idx}`)?.checked ?? false
   }));
 
   const dataCompra = nfceParsed.data
@@ -1422,7 +1482,8 @@ async function confirmarCompra() {
     quantidade: it.quantidade,
     unidade: it.unidade,
     preco_unitario: it.preco_unitario,
-    preco_total: it.preco_total
+    preco_total: it.preco_total,
+    fora_da_lista: it.fora_da_lista ?? false
   }));
   await sb.from('itens_compra').insert(rows);
 
@@ -1521,9 +1582,11 @@ async function loadDashboard() {
   let gastosCat = {};
   let totalItens = 0;
 
+  let totalExtras = 0;
+
   if (ids.length) {
     const { data: items } = await sb.from('itens_compra')
-      .select('nome_original,preco_total,categoria_id,categorias(nome,cor)')
+      .select('nome_original,preco_total,categoria_id,fora_da_lista,categorias(nome,cor)')
       .in('compra_id', ids);
 
     (items || []).forEach(it => {
@@ -1532,6 +1595,7 @@ async function loadDashboard() {
       const cor     = it.categorias?.cor  || '#95a5a6';
       if (!gastosCat[catNome]) gastosCat[catNome] = { total: 0, cor };
       gastosCat[catNome].total += it.preco_total || 0;
+      if (it.fora_da_lista) totalExtras += it.preco_total || 0;
     });
   }
 
@@ -1539,6 +1603,7 @@ async function loadDashboard() {
   document.getElementById('dash-itens').textContent  = totalItens;
   document.getElementById('dash-compras').textContent = nVisitas;
   document.getElementById('dash-ticket').textContent  = formatMoeda(ticket);
+  document.getElementById('dash-extras').textContent  = formatMoeda(totalExtras);
 
   renderPieChart(gastosCat);
   await renderLineChart();
