@@ -3,6 +3,23 @@
 -- Execute no SQL Editor do Supabase (supabase.com/dashboard)
 -- ============================================================
 
+-- ============================================================
+-- PASSO 0 — DESABILITAR RLS (Row Level Security)
+-- O Supabase ativa RLS por padrão; sem isso a anon key não
+-- consegue ler nenhuma linha e o login falha silenciosamente.
+-- Execute este bloco ANTES de qualquer outra coisa.
+-- ============================================================
+ALTER TABLE IF EXISTS usuarios         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS categorias       DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS produtos         DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS listas_compras   DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS itens_lista      DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS compras          DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS itens_compra     DISABLE ROW LEVEL SECURITY;
+
+-- Se as tabelas ainda não existem, rode o bloco acima de novo
+-- depois de criá-las (as linhas com IF EXISTS são seguras).
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ===== CATEGORIAS =====

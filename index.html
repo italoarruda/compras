@@ -670,12 +670,27 @@ async function login() {
   btn.disabled = true; btn.textContent = 'Verificando...';
 
   try {
-    const { data, error } = await sb.from('usuarios')
+    const { data, error, status, statusText } = await sb.from('usuarios')
       .select('*').eq('cpf', cpf).eq('data_nascimento', nasc).maybeSingle();
 
     btn.disabled = false; btn.textContent = 'Entrar';
 
-    if (error) throw error;
+    // Diagnóstico visível — remove após confirmar funcionamento
+    console.log('[Login] cpf enviado:', cpf, '| data:', nasc);
+    console.log('[Login] status:', status, statusText);
+    console.log('[Login] data:', data, '| error:', error);
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // Múltiplos registros — CPF duplicado no banco
+        showError('Erro: CPF duplicado no banco. Corrija via Supabase.');
+      } else if (status === 401 || status === 403) {
+        showError('Permissão negada (RLS). Rode o SQL de configuração no Supabase.');
+      } else {
+        throw error;
+      }
+      return;
+    }
 
     if (data) {
       cpfInput.style.borderColor = 'var(--accent)';
@@ -683,13 +698,21 @@ async function login() {
       localStorage.setItem('compras_user', JSON.stringify(data));
       await bootstrapApp();
     } else {
-      showError('CPF ou data de nascimento incorretos.');
-      cpfInput.style.borderColor = 'var(--danger)';
+      // data === null pode significar RLS bloqueando silenciosamente
+      // Testa se a tabela é acessível sem filtros
+      const { count } = await sb.from('usuarios').select('*', { count: 'exact', head: true });
+      console.log('[Login] total de usuários visíveis:', count);
+      if (count === 0 || count === null) {
+        showError('Acesso bloqueado pelo banco (RLS). Rode o SQL de configuração no Supabase.');
+      } else {
+        showError('CPF ou data de nascimento incorretos.');
+        cpfInput.style.borderColor = 'var(--danger)';
+      }
     }
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Entrar';
     showError('Erro de conexão. Verifique sua internet e tente novamente.');
-    console.error('Login error:', e);
+    console.error('[Login] exception:', e);
   }
 }
 
