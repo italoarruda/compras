@@ -54,40 +54,34 @@ BEGIN
   SELECT id INTO new_higiene  FROM categorias WHERE nome = 'Higiene e Cuidados';
 
   -- Hortifruti ← Frutas + Legumes + Verduras e Ervas
-  UPDATE produtos    SET categoria_id = new_horti  WHERE categoria_id IN (old_frutas, old_legumes, old_verduras);
-  UPDATE itens_lista SET categoria_id = new_horti  WHERE categoria_id IN (old_frutas, old_legumes, old_verduras);
-  UPDATE itens_compra SET categoria_id = new_horti WHERE categoria_id IN (old_frutas, old_legumes, old_verduras);
+  UPDATE produtos     SET categoria_id = new_horti  WHERE categoria_id IN (old_frutas, old_legumes, old_verduras);
+  UPDATE itens_compra SET categoria_id = new_horti  WHERE categoria_id IN (old_frutas, old_legumes, old_verduras);
 
   -- Carnes e Proteínas ← Bovinas + Aves + Peixes + Embutidos + Ovos
-  UPDATE produtos    SET categoria_id = new_carnes  WHERE categoria_id IN (old_bovina, old_aves, old_peixes, old_embutidos, old_ovos);
-  UPDATE itens_lista SET categoria_id = new_carnes  WHERE categoria_id IN (old_bovina, old_aves, old_peixes, old_embutidos, old_ovos);
-  UPDATE itens_compra SET categoria_id = new_carnes WHERE categoria_id IN (old_bovina, old_aves, old_peixes, old_embutidos, old_ovos);
+  UPDATE produtos     SET categoria_id = new_carnes  WHERE categoria_id IN (old_bovina, old_aves, old_peixes, old_embutidos, old_ovos);
+  UPDATE itens_compra SET categoria_id = new_carnes  WHERE categoria_id IN (old_bovina, old_aves, old_peixes, old_embutidos, old_ovos);
 
   -- Mercearia ← Grãos + Farinhas + Massas + Enlatados
-  UPDATE produtos    SET categoria_id = new_mercea  WHERE categoria_id IN (old_graos, old_farinhas, old_massas, old_enlatados);
-  UPDATE itens_lista SET categoria_id = new_mercea  WHERE categoria_id IN (old_graos, old_farinhas, old_massas, old_enlatados);
-  UPDATE itens_compra SET categoria_id = new_mercea WHERE categoria_id IN (old_graos, old_farinhas, old_massas, old_enlatados);
+  UPDATE produtos     SET categoria_id = new_mercea  WHERE categoria_id IN (old_graos, old_farinhas, old_massas, old_enlatados);
+  UPDATE itens_compra SET categoria_id = new_mercea  WHERE categoria_id IN (old_graos, old_farinhas, old_massas, old_enlatados);
 
   -- Padaria e Doces ← Lanches e Guloseimas
-  UPDATE produtos    SET categoria_id = new_padaria  WHERE categoria_id = old_lanches;
-  UPDATE itens_lista SET categoria_id = new_padaria  WHERE categoria_id = old_lanches;
-  UPDATE itens_compra SET categoria_id = new_padaria WHERE categoria_id = old_lanches;
+  UPDATE produtos     SET categoria_id = new_padaria  WHERE categoria_id = old_lanches;
+  UPDATE itens_compra SET categoria_id = new_padaria  WHERE categoria_id = old_lanches;
 
   -- Higiene e Cuidados ← Higiene Pessoal + Descartáveis e Outros
-  UPDATE produtos    SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
-  UPDATE itens_lista SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
-  UPDATE itens_compra SET categoria_id = new_higiene WHERE categoria_id = old_descartaveis;
+  UPDATE produtos     SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
+  UPDATE itens_compra SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
 
-  -- "Higiene Pessoal" já vira "Higiene e Cuidados" — renomeia no lugar
+  -- "Higiene Pessoal" renomeia no lugar (mantém o ID, evita recriar)
   UPDATE categorias SET nome = 'Higiene e Cuidados', cor = '#1abc9c', ordem = 90
     WHERE nome = 'Higiene Pessoal';
 
-  -- "Lanches e Guloseimas" já vira "Padaria e Doces" — renomeia no lugar
+  -- "Lanches e Guloseimas" renomeia no lugar
   UPDATE categorias SET nome = 'Padaria e Doces', cor = '#f39c12', icone = '🍫', ordem = 70
     WHERE nome = 'Lanches e Guloseimas';
 
   -- Remove categorias antigas que foram consolidadas
-  -- (só remove se não houver mais referências)
   DELETE FROM categorias WHERE nome IN (
     'Frutas','Legumes','Verduras e Ervas',
     'Carnes Bovinas','Aves','Peixes e Frutos do Mar',
