@@ -653,21 +653,43 @@ async function login() {
   const cpfInput = document.getElementById('inp-cpf');
   const cpf  = cpfInput.value.replace(/\D/g, '');
   const nasc = document.getElementById('inp-nasc').value;
-  const btn  = document.getElementById('btn-login');
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('btn-login');
+
+  errEl.style.display = 'none';
+
   if (!cpf || !nasc) { showError('Preencha todos os campos.'); return; }
   if (cpf.length !== 11) { showError('CPF incompleto.'); cpfInput.focus(); return; }
-  if (!validarCPF(cpf)) { showError('CPF inválido.'); cpfInput.style.borderColor='var(--danger)'; cpfInput.focus(); return; }
-  btn.disabled = true; btn.textContent = 'Entrando...';
-  const { data, error } = await sb.from('usuarios')
-    .select('*').eq('cpf', cpf).eq('data_nascimento', nasc).maybeSingle();
-  btn.disabled = false; btn.textContent = 'Entrar';
-  if (data) {
-    err.style.display = 'none';
-    currentUser = data;
-    localStorage.setItem('compras_user', JSON.stringify(data));
-    await bootstrapApp();
-  } else {
-    err.style.display = 'block';
+  if (!validarCPF(cpf)) {
+    showError('CPF inválido. Verifique os números digitados.');
+    cpfInput.style.borderColor = 'var(--danger)';
+    cpfInput.focus();
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Verificando...';
+
+  try {
+    const { data, error } = await sb.from('usuarios')
+      .select('*').eq('cpf', cpf).eq('data_nascimento', nasc).maybeSingle();
+
+    btn.disabled = false; btn.textContent = 'Entrar';
+
+    if (error) throw error;
+
+    if (data) {
+      cpfInput.style.borderColor = 'var(--accent)';
+      currentUser = data;
+      localStorage.setItem('compras_user', JSON.stringify(data));
+      await bootstrapApp();
+    } else {
+      showError('CPF ou data de nascimento incorretos.');
+      cpfInput.style.borderColor = 'var(--danger)';
+    }
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Entrar';
+    showError('Erro de conexão. Verifique sua internet e tente novamente.');
+    console.error('Login error:', e);
   }
 }
 
