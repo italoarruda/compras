@@ -115,25 +115,15 @@ CREATE INDEX IF NOT EXISTS idx_itens_cat ON itens_compra(categoria_id);
 -- SEED: Categorias
 -- ============================================================
 INSERT INTO categorias (nome, cor, icone, ordem) VALUES
-  ('Frutas',                 '#27ae60', '🍎', 10),
-  ('Legumes',                '#2ecc71', '🥦', 20),
-  ('Verduras e Ervas',       '#1abc9c', '🌿', 30),
-  ('Carnes Bovinas',         '#c0392b', '🥩', 40),
-  ('Aves',                   '#e74c3c', '🍗', 50),
-  ('Peixes e Frutos do Mar', '#2980b9', '🐟', 60),
-  ('Laticínios',             '#3498db', '🥛', 70),
-  ('Embutidos e Frios',      '#8e44ad', '🥓', 80),
-  ('Ovos',                   '#f39c12', '🥚', 90),
-  ('Grãos e Cereais',        '#e67e22', '🌾', 100),
-  ('Farinhas e Amidos',      '#d35400', '🌽', 110),
-  ('Massas',                 '#f0932b', '🍝', 120),
-  ('Temperos e Condimentos', '#9b59b6', '🧄', 130),
-  ('Enlatados e Conservas',  '#7f8c8d', '🥫', 140),
-  ('Bebidas',                '#16a085', '🧃', 150),
-  ('Lanches e Guloseimas',   '#e67e22', '🍫', 160),
-  ('Limpeza',                '#2c3e50', '🧹', 170),
-  ('Higiene Pessoal',        '#16a085', '🧴', 180),
-  ('Descartáveis e Outros',  '#95a5a6', '🛍️', 190)
+  ('Hortifruti',             '#27ae60', '🥦', 10),
+  ('Carnes e Proteínas',     '#c0392b', '🥩', 20),
+  ('Laticínios',             '#3498db', '🥛', 30),
+  ('Mercearia',              '#e67e22', '🌾', 40),
+  ('Temperos e Condimentos', '#9b59b6', '🧄', 50),
+  ('Bebidas',                '#16a085', '🧃', 60),
+  ('Padaria e Doces',        '#f39c12', '🍫', 70),
+  ('Limpeza',                '#2c3e50', '🧹', 80),
+  ('Higiene e Cuidados',     '#1abc9c', '🧴', 90)
 ON CONFLICT (nome) DO NOTHING;
 
 -- ============================================================
@@ -141,392 +131,171 @@ ON CONFLICT (nome) DO NOTHING;
 -- ============================================================
 DO $$
 DECLARE
-  cat_frutas       UUID; cat_legumes UUID; cat_verduras UUID;
-  cat_bovina       UUID; cat_aves    UUID; cat_peixes   UUID;
-  cat_laticinios   UUID; cat_embutidos UUID; cat_ovos   UUID;
-  cat_graos        UUID; cat_farinhas  UUID; cat_massas  UUID;
-  cat_temperos     UUID; cat_enlatados UUID; cat_bebidas UUID;
-  cat_lanches      UUID; cat_limpeza   UUID; cat_higiene UUID;
-  cat_descartaveis UUID;
+  cat_horti    UUID; cat_carnes  UUID; cat_latic    UUID;
+  cat_mercea   UUID; cat_temp    UUID; cat_bebidas  UUID;
+  cat_padaria  UUID; cat_limpeza UUID; cat_higiene  UUID;
 BEGIN
-  SELECT id INTO cat_frutas       FROM categorias WHERE nome = 'Frutas';
-  SELECT id INTO cat_legumes      FROM categorias WHERE nome = 'Legumes';
-  SELECT id INTO cat_verduras     FROM categorias WHERE nome = 'Verduras e Ervas';
-  SELECT id INTO cat_bovina       FROM categorias WHERE nome = 'Carnes Bovinas';
-  SELECT id INTO cat_aves         FROM categorias WHERE nome = 'Aves';
-  SELECT id INTO cat_peixes       FROM categorias WHERE nome = 'Peixes e Frutos do Mar';
-  SELECT id INTO cat_laticinios   FROM categorias WHERE nome = 'Laticínios';
-  SELECT id INTO cat_embutidos    FROM categorias WHERE nome = 'Embutidos e Frios';
-  SELECT id INTO cat_ovos         FROM categorias WHERE nome = 'Ovos';
-  SELECT id INTO cat_graos        FROM categorias WHERE nome = 'Grãos e Cereais';
-  SELECT id INTO cat_farinhas     FROM categorias WHERE nome = 'Farinhas e Amidos';
-  SELECT id INTO cat_massas       FROM categorias WHERE nome = 'Massas';
-  SELECT id INTO cat_temperos     FROM categorias WHERE nome = 'Temperos e Condimentos';
-  SELECT id INTO cat_enlatados    FROM categorias WHERE nome = 'Enlatados e Conservas';
-  SELECT id INTO cat_bebidas      FROM categorias WHERE nome = 'Bebidas';
-  SELECT id INTO cat_lanches      FROM categorias WHERE nome = 'Lanches e Guloseimas';
-  SELECT id INTO cat_limpeza      FROM categorias WHERE nome = 'Limpeza';
-  SELECT id INTO cat_higiene      FROM categorias WHERE nome = 'Higiene Pessoal';
-  SELECT id INTO cat_descartaveis FROM categorias WHERE nome = 'Descartáveis e Outros';
+  SELECT id INTO cat_horti    FROM categorias WHERE nome = 'Hortifruti';
+  SELECT id INTO cat_carnes   FROM categorias WHERE nome = 'Carnes e Proteínas';
+  SELECT id INTO cat_latic    FROM categorias WHERE nome = 'Laticínios';
+  SELECT id INTO cat_mercea   FROM categorias WHERE nome = 'Mercearia';
+  SELECT id INTO cat_temp     FROM categorias WHERE nome = 'Temperos e Condimentos';
+  SELECT id INTO cat_bebidas  FROM categorias WHERE nome = 'Bebidas';
+  SELECT id INTO cat_padaria  FROM categorias WHERE nome = 'Padaria e Doces';
+  SELECT id INTO cat_limpeza  FROM categorias WHERE nome = 'Limpeza';
+  SELECT id INTO cat_higiene  FROM categorias WHERE nome = 'Higiene e Cuidados';
 
-  -- FRUTAS
+  -- HORTIFRUTI (Frutas + Legumes + Verduras e Ervas)
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Abacate',       cat_frutas, 'uni'),
-    ('Abacaxi',       cat_frutas, 'uni'),
-    ('Açaí',          cat_frutas, 'Kg'),
-    ('Acerola',       cat_frutas, 'Kg'),
-    ('Banana',        cat_frutas, 'Kg'),
-    ('Banana da terra', cat_frutas, 'Kg'),
-    ('Caju',          cat_frutas, 'Kg'),
-    ('Cajá',          cat_frutas, 'Kg'),
-    ('Carambola',     cat_frutas, 'Kg'),
-    ('Coco',          cat_frutas, 'uni'),
-    ('Cupuaçu',       cat_frutas, 'Kg'),
-    ('Goiaba',        cat_frutas, 'Kg'),
-    ('Graviola',      cat_frutas, 'Kg'),
-    ('Laranja',       cat_frutas, 'Kg'),
-    ('Lima',          cat_frutas, 'Kg'),
-    ('Limão',         cat_frutas, 'Kg'),
-    ('Maçã',          cat_frutas, 'Kg'),
-    ('Mamão',         cat_frutas, 'Kg'),
-    ('Manga rosa',    cat_frutas, 'Kg'),
-    ('Mangaba',       cat_frutas, 'Kg'),
-    ('Maracujá',      cat_frutas, 'Kg'),
-    ('Melancia',      cat_frutas, 'uni'),
-    ('Melão',         cat_frutas, 'uni'),
-    ('Morango',       cat_frutas, 'pct'),
-    ('Pera',          cat_frutas, 'Kg'),
-    ('Pêssego',       cat_frutas, 'Kg'),
-    ('Pitanga',       cat_frutas, 'Kg'),
-    ('Pupunha',       cat_frutas, 'Kg'),
-    ('Tamarindo',     cat_frutas, 'Kg'),
-    ('Taperebá',      cat_frutas, 'Kg'),
-    ('Uva',           cat_frutas, 'Kg')
+    ('Abacate',           cat_horti, 'uni'), ('Abacaxi',       cat_horti, 'uni'),
+    ('Açaí',              cat_horti, 'Kg'),  ('Acerola',       cat_horti, 'Kg'),
+    ('Banana',            cat_horti, 'Kg'),  ('Banana da terra', cat_horti, 'Kg'),
+    ('Caju',              cat_horti, 'Kg'),  ('Cajá',          cat_horti, 'Kg'),
+    ('Coco',              cat_horti, 'uni'), ('Cupuaçu',       cat_horti, 'Kg'),
+    ('Goiaba',            cat_horti, 'Kg'),  ('Graviola',      cat_horti, 'Kg'),
+    ('Laranja',           cat_horti, 'Kg'),  ('Lima',          cat_horti, 'Kg'),
+    ('Limão',             cat_horti, 'Kg'),  ('Maçã',          cat_horti, 'Kg'),
+    ('Mamão',             cat_horti, 'Kg'),  ('Manga rosa',    cat_horti, 'Kg'),
+    ('Maracujá',          cat_horti, 'Kg'),  ('Melancia',      cat_horti, 'uni'),
+    ('Melão',             cat_horti, 'uni'), ('Morango',       cat_horti, 'pct'),
+    ('Pera',              cat_horti, 'Kg'),  ('Uva',           cat_horti, 'Kg'),
+    ('Abóbora',           cat_horti, 'Kg'),  ('Abobrinha',     cat_horti, 'Kg'),
+    ('Batata doce',       cat_horti, 'Kg'),  ('Batata inglesa', cat_horti, 'Kg'),
+    ('Berinjela',         cat_horti, 'Kg'),  ('Beterraba',     cat_horti, 'Kg'),
+    ('Cebola branca',     cat_horti, 'Kg'),  ('Cebola roxa',   cat_horti, 'Kg'),
+    ('Chuchu',            cat_horti, 'Kg'),  ('Inhame',        cat_horti, 'Kg'),
+    ('Macaxeira',         cat_horti, 'Kg'),  ('Milho verde',   cat_horti, 'uni'),
+    ('Pepino',            cat_horti, 'uni'), ('Pimentão amarelo', cat_horti, 'uni'),
+    ('Pimentão verde',    cat_horti, 'uni'), ('Pimentão vermelho', cat_horti, 'uni'),
+    ('Quiabo',            cat_horti, 'Kg'),  ('Tomate',        cat_horti, 'Kg'),
+    ('Vagem',             cat_horti, 'Kg'),  ('Acelga',        cat_horti, 'maço'),
+    ('Alface',            cat_horti, 'uni'), ('Alho',          cat_horti, 'uni'),
+    ('Cebolinha',         cat_horti, 'maço'),('Coentro',       cat_horti, 'maço'),
+    ('Couve',             cat_horti, 'maço'),('Espinafre',     cat_horti, 'maço'),
+    ('Gengibre',          cat_horti, 'Kg'),  ('Hortelã',       cat_horti, 'maço'),
+    ('Pimenta de cheiro', cat_horti, 'uni'), ('Rúcula',        cat_horti, 'maço'),
+    ('Salsa',             cat_horti, 'maço')
   ON CONFLICT DO NOTHING;
 
-  -- LEGUMES
+  -- CARNES E PROTEÍNAS (Bovinas + Aves + Peixes + Embutidos + Ovos)
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Abóbora',              cat_legumes, 'Kg'),
-    ('Abobrinha',            cat_legumes, 'Kg'),
-    ('Batata doce',          cat_legumes, 'Kg'),
-    ('Batata inglesa',       cat_legumes, 'Kg'),
-    ('Batata palha congelada', cat_legumes, 'pct'),
-    ('Berinjela',            cat_legumes, 'Kg'),
-    ('Beterraba',            cat_legumes, 'Kg'),
-    ('Cará',                 cat_legumes, 'Kg'),
-    ('Cebola branca',        cat_legumes, 'Kg'),
-    ('Cebola roxa',          cat_legumes, 'Kg'),
-    ('Chuchu',               cat_legumes, 'Kg'),
-    ('Inhame',               cat_legumes, 'Kg'),
-    ('Macaxeira',            cat_legumes, 'Kg'),
-    ('Maxixe',               cat_legumes, 'Kg'),
-    ('Milho verde',          cat_legumes, 'uni'),
-    ('Pepino',               cat_legumes, 'uni'),
-    ('Pimentão amarelo',     cat_legumes, 'uni'),
-    ('Pimentão verde',       cat_legumes, 'uni'),
-    ('Pimentão vermelho',    cat_legumes, 'uni'),
-    ('Quiabo',               cat_legumes, 'Kg'),
-    ('Repolho',              cat_legumes, 'uni'),
-    ('Tomate',               cat_legumes, 'Kg'),
-    ('Vagem',                cat_legumes, 'Kg')
-  ON CONFLICT DO NOTHING;
-
-  -- VERDURAS E ERVAS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Acelga',             cat_verduras, 'maço'),
-    ('Agrião',             cat_verduras, 'maço'),
-    ('Alface',             cat_verduras, 'uni'),
-    ('Alho',               cat_verduras, 'uni'),
-    ('Cebolinha',          cat_verduras, 'maço'),
-    ('Coentro',            cat_verduras, 'maço'),
-    ('Couve',              cat_verduras, 'maço'),
-    ('Couve-flor',         cat_verduras, 'uni'),
-    ('Espinafre',          cat_verduras, 'maço'),
-    ('Gengibre',           cat_verduras, 'Kg'),
-    ('Hortelã',            cat_verduras, 'maço'),
-    ('Manjericão',         cat_verduras, 'maço'),
-    ('Orégano fresco',     cat_verduras, 'maço'),
-    ('Pimenta de cheiro',  cat_verduras, 'uni'),
-    ('Pimenta dedo de moça', cat_verduras, 'uni'),
-    ('Rúcula',             cat_verduras, 'maço'),
-    ('Salsa',              cat_verduras, 'maço'),
-    ('Tomilho fresco',     cat_verduras, 'maço')
-  ON CONFLICT DO NOTHING;
-
-  -- CARNES BOVINAS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Acém',               cat_bovina, 'Kg'),
-    ('Alcatra',            cat_bovina, 'Kg'),
-    ('Bisteca bovina',     cat_bovina, 'Kg'),
-    ('Chambaril',          cat_bovina, 'Kg'),
-    ('Contrafilé',         cat_bovina, 'Kg'),
-    ('Costela bovina',     cat_bovina, 'Kg'),
-    ('Coxão duro',         cat_bovina, 'Kg'),
-    ('Coxão mole',         cat_bovina, 'Kg'),
-    ('Filé mignon',        cat_bovina, 'Kg'),
-    ('Fraldinha',          cat_bovina, 'Kg'),
-    ('Hambúrguer artesanal', cat_bovina, 'pct'),
-    ('Lagarto',            cat_bovina, 'Kg'),
-    ('Músculo',            cat_bovina, 'Kg'),
-    ('Osso para caldo',    cat_bovina, 'Kg'),
-    ('Patinho',            cat_bovina, 'Kg'),
-    ('Picanha',            cat_bovina, 'Kg')
-  ON CONFLICT DO NOTHING;
-
-  -- AVES
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Asa de frango',       cat_aves, 'Kg'),
-    ('Coxa de frango',      cat_aves, 'Kg'),
-    ('Coxa e sobrecoxa',    cat_aves, 'Kg'),
-    ('Coxinha de asa',      cat_aves, 'pct'),
-    ('Filé de frango',      cat_aves, 'Kg'),
-    ('Frango caipira',      cat_aves, 'Kg'),
-    ('Frango inteiro',      cat_aves, 'Kg'),
-    ('Linguiça de frango',  cat_aves, 'Kg'),
-    ('Peito de frango',     cat_aves, 'Kg'),
-    ('Peru',                cat_aves, 'Kg')
-  ON CONFLICT DO NOTHING;
-
-  -- PEIXES E FRUTOS DO MAR
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Camarão',         cat_peixes, 'Kg'),
-    ('Caranguejo',      cat_peixes, 'Kg'),
-    ('Filé de pirarucu', cat_peixes, 'Kg'),
-    ('Jaraqui',         cat_peixes, 'Kg'),
-    ('Pacu',            cat_peixes, 'Kg'),
-    ('Pintado',         cat_peixes, 'Kg'),
-    ('Sardinha fresca', cat_peixes, 'Kg'),
-    ('Tambaqui',        cat_peixes, 'Kg'),
-    ('Tilápia',         cat_peixes, 'Kg'),
-    ('Tucunaré',        cat_peixes, 'Kg')
+    ('Acém',               cat_carnes, 'Kg'), ('Alcatra',         cat_carnes, 'Kg'),
+    ('Bisteca bovina',     cat_carnes, 'Kg'), ('Contrafilé',      cat_carnes, 'Kg'),
+    ('Costela bovina',     cat_carnes, 'Kg'), ('Coxão mole',      cat_carnes, 'Kg'),
+    ('Filé mignon',        cat_carnes, 'Kg'), ('Fraldinha',       cat_carnes, 'Kg'),
+    ('Hambúrguer artesanal', cat_carnes, 'pct'), ('Lagarto',      cat_carnes, 'Kg'),
+    ('Músculo',            cat_carnes, 'Kg'), ('Patinho',         cat_carnes, 'Kg'),
+    ('Picanha',            cat_carnes, 'Kg'),
+    ('Asa de frango',      cat_carnes, 'Kg'), ('Coxa de frango',  cat_carnes, 'Kg'),
+    ('Coxa e sobrecoxa',   cat_carnes, 'Kg'), ('Coxinha de asa',  cat_carnes, 'pct'),
+    ('Filé de frango',     cat_carnes, 'Kg'), ('Frango inteiro',  cat_carnes, 'Kg'),
+    ('Linguiça de frango', cat_carnes, 'Kg'), ('Peito de frango', cat_carnes, 'Kg'),
+    ('Peru',               cat_carnes, 'Kg'),
+    ('Camarão',            cat_carnes, 'Kg'), ('Filé de pirarucu', cat_carnes, 'Kg'),
+    ('Jaraqui',            cat_carnes, 'Kg'), ('Sardinha fresca', cat_carnes, 'Kg'),
+    ('Tambaqui',           cat_carnes, 'Kg'), ('Tilápia',         cat_carnes, 'Kg'),
+    ('Tucunaré',           cat_carnes, 'Kg'),
+    ('Apresuntado',        cat_carnes, 'Kg'), ('Linguiça calabresa', cat_carnes, 'Kg'),
+    ('Mortadela',          cat_carnes, 'Kg'), ('Presunto',        cat_carnes, 'Kg'),
+    ('Salame',             cat_carnes, 'Kg'), ('Salsicha',        cat_carnes, 'pct'),
+    ('Ovos branco',        cat_carnes, 'uni'),('Ovos caipira',    cat_carnes, 'uni'),
+    ('Ovos codorna',       cat_carnes, 'uni'),('Ovos vermelhos',  cat_carnes, 'uni')
   ON CONFLICT DO NOTHING;
 
   -- LATICÍNIOS
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Bebida láctea',        cat_laticinios, 'L'),
-    ('Creme de leite',       cat_laticinios, 'uni'),
-    ('Iogurte grego',        cat_laticinios, 'uni'),
-    ('Iogurte natural',      cat_laticinios, 'uni'),
-    ('Leite condensado',     cat_laticinios, 'uni'),
-    ('Leite de coco',        cat_laticinios, 'uni'),
-    ('Leite desnatado',      cat_laticinios, 'L'),
-    ('Leite em pó',          cat_laticinios, 'pct'),
-    ('Leite fermentado',     cat_laticinios, 'pct'),
-    ('Leite integral',       cat_laticinios, 'L'),
-    ('Manteiga',             cat_laticinios, 'uni'),
-    ('Manteiga de garrafa',  cat_laticinios, 'uni'),
-    ('Margarina 500g',       cat_laticinios, 'uni'),
-    ('Queijo coalho',        cat_laticinios, 'Kg'),
-    ('Queijo cottage',       cat_laticinios, 'uni'),
-    ('Queijo minas frescal', cat_laticinios, 'uni'),
-    ('Queijo mussarela',     cat_laticinios, 'Kg'),
-    ('Queijo parmesão ralado', cat_laticinios, 'pct'),
-    ('Queijo ralado',        cat_laticinios, 'pct'),
-    ('Requeijão',            cat_laticinios, 'uni')
+    ('Bebida láctea',         cat_latic, 'L'),   ('Creme de leite',       cat_latic, 'uni'),
+    ('Iogurte grego',         cat_latic, 'uni'),  ('Iogurte natural',      cat_latic, 'uni'),
+    ('Leite condensado',      cat_latic, 'uni'),  ('Leite de coco',        cat_latic, 'uni'),
+    ('Leite desnatado',       cat_latic, 'L'),   ('Leite em pó',          cat_latic, 'pct'),
+    ('Leite integral',        cat_latic, 'L'),   ('Manteiga',             cat_latic, 'uni'),
+    ('Manteiga de garrafa',   cat_latic, 'uni'),  ('Margarina 500g',       cat_latic, 'uni'),
+    ('Queijo coalho',         cat_latic, 'Kg'),  ('Queijo minas frescal', cat_latic, 'uni'),
+    ('Queijo mussarela',      cat_latic, 'Kg'),  ('Queijo parmesão ralado', cat_latic, 'pct'),
+    ('Requeijão',             cat_latic, 'uni')
   ON CONFLICT DO NOTHING;
 
-  -- EMBUTIDOS
+  -- MERCEARIA (Grãos + Farinhas + Massas + Enlatados)
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Apresuntado',       cat_embutidos, 'Kg'),
-    ('Linguiça calabresa', cat_embutidos, 'Kg'),
-    ('Mortadela',         cat_embutidos, 'Kg'),
-    ('Presunto',          cat_embutidos, 'Kg'),
-    ('Salame',            cat_embutidos, 'Kg'),
-    ('Salsicha',          cat_embutidos, 'pct')
-  ON CONFLICT DO NOTHING;
-
-  -- OVOS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Ovos branco',    cat_ovos, 'uni'),
-    ('Ovos caipira',   cat_ovos, 'uni'),
-    ('Ovos codorna',   cat_ovos, 'uni'),
-    ('Ovos vermelhos', cat_ovos, 'uni')
-  ON CONFLICT DO NOTHING;
-
-  -- GRÃOS E CEREAIS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Arroz branco',       cat_graos, 'Kg'),
-    ('Arroz integral',     cat_graos, 'Kg'),
-    ('Arroz parboilizado', cat_graos, 'Kg'),
-    ('Aveia em flocos',    cat_graos, 'pct'),
-    ('Cevada',             cat_graos, 'pct'),
-    ('Ervilha seca',       cat_graos, 'Kg'),
-    ('Feijão branco',      cat_graos, 'Kg'),
-    ('Feijão carioca',     cat_graos, 'Kg'),
-    ('Feijão de baião',    cat_graos, 'Kg'),
-    ('Feijão fradinho',    cat_graos, 'Kg'),
-    ('Feijão jalo',        cat_graos, 'Kg'),
-    ('Feijão mulato',      cat_graos, 'Kg'),
-    ('Feijão preto',       cat_graos, 'Kg'),
-    ('Floção de milho',    cat_graos, 'pct'),
-    ('Grão de bico',       cat_graos, 'Kg'),
-    ('Lentilha',           cat_graos, 'Kg'),
-    ('Milho para pipoca',  cat_graos, 'pct'),
-    ('Quinoa',             cat_graos, 'pct')
-  ON CONFLICT DO NOTHING;
-
-  -- FARINHAS E AMIDOS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Amido de milho',          cat_farinhas, 'pct'),
-    ('Farinha de arroz',        cat_farinhas, 'pct'),
-    ('Farinha de aveia',        cat_farinhas, 'pct'),
-    ('Farinha de mandioca',     cat_farinhas, 'Kg'),
-    ('Farinha de trigo branca', cat_farinhas, 'Kg'),
-    ('Farinha de trigo integral', cat_farinhas, 'Kg'),
-    ('Fubá mimoso',             cat_farinhas, 'pct'),
-    ('Goma de tapioca',         cat_farinhas, 'pct'),
-    ('Polvilho azedo',          cat_farinhas, 'pct'),
-    ('Polvilho doce',           cat_farinhas, 'pct')
-  ON CONFLICT DO NOTHING;
-
-  -- MASSAS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Lasanha',                   cat_massas, 'pct'),
-    ('Macarrão ave-maria',        cat_massas, 'pct'),
-    ('Macarrão espaguete',        cat_massas, 'pct'),
-    ('Macarrão espaguete integral', cat_massas, 'pct'),
-    ('Macarrão parafuso',         cat_massas, 'pct'),
-    ('Macarrão pena',             cat_massas, 'pct'),
-    ('Macarrão sopa',             cat_massas, 'pct')
+    ('Arroz branco',           cat_mercea, 'Kg'),  ('Arroz integral',     cat_mercea, 'Kg'),
+    ('Arroz parboilizado',     cat_mercea, 'Kg'),  ('Aveia em flocos',    cat_mercea, 'pct'),
+    ('Ervilha seca',           cat_mercea, 'Kg'),  ('Feijão branco',      cat_mercea, 'Kg'),
+    ('Feijão carioca',         cat_mercea, 'Kg'),  ('Feijão de baião',    cat_mercea, 'Kg'),
+    ('Feijão fradinho',        cat_mercea, 'Kg'),  ('Feijão preto',       cat_mercea, 'Kg'),
+    ('Grão de bico',           cat_mercea, 'Kg'),  ('Lentilha',           cat_mercea, 'Kg'),
+    ('Milho para pipoca',      cat_mercea, 'pct'), ('Quinoa',             cat_mercea, 'pct'),
+    ('Amido de milho',         cat_mercea, 'pct'), ('Farinha de mandioca', cat_mercea, 'Kg'),
+    ('Farinha de trigo branca', cat_mercea, 'Kg'), ('Farinha de trigo integral', cat_mercea, 'Kg'),
+    ('Fubá mimoso',            cat_mercea, 'pct'), ('Goma de tapioca',    cat_mercea, 'pct'),
+    ('Polvilho azedo',         cat_mercea, 'pct'), ('Polvilho doce',      cat_mercea, 'pct'),
+    ('Lasanha',                cat_mercea, 'pct'), ('Macarrão ave-maria', cat_mercea, 'pct'),
+    ('Macarrão espaguete',     cat_mercea, 'pct'), ('Macarrão espaguete integral', cat_mercea, 'pct'),
+    ('Macarrão parafuso',      cat_mercea, 'pct'), ('Macarrão pena',      cat_mercea, 'pct'),
+    ('Macarrão sopa',          cat_mercea, 'pct'),
+    ('Atum em água',           cat_mercea, 'uni'), ('Atum em azeite',     cat_mercea, 'uni'),
+    ('Ervilha lata',           cat_mercea, 'uni'), ('Milho lata',         cat_mercea, 'uni'),
+    ('Palmito',                cat_mercea, 'uni'), ('Sardinha lata',      cat_mercea, 'uni'),
+    ('Seleta de legumes',      cat_mercea, 'uni')
   ON CONFLICT DO NOTHING;
 
   -- TEMPEROS E CONDIMENTOS
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Açafrão cúrcuma',          cat_temperos, 'pct'),
-    ('Azeite de oliva',          cat_temperos, 'uni'),
-    ('Azeitona preta',           cat_temperos, 'pct'),
-    ('Azeitona verde',           cat_temperos, 'pct'),
-    ('Bicarbonato de sódio',     cat_temperos, 'pct'),
-    ('Cacau em pó',              cat_temperos, 'pct'),
-    ('Canela em pau',            cat_temperos, 'pct'),
-    ('Canela em pó',             cat_temperos, 'pct'),
-    ('Chimichurri',              cat_temperos, 'pct'),
-    ('Colorau',                  cat_temperos, 'pct'),
-    ('Cominho',                  cat_temperos, 'pct'),
-    ('Curry',                    cat_temperos, 'pct'),
-    ('Dendê',                    cat_temperos, 'L'),
-    ('Erva doce',                cat_temperos, 'pct'),
-    ('Extrato de tomate',        cat_temperos, 'uni'),
-    ('Fermento em pó',           cat_temperos, 'pct'),
-    ('Ketchup',                  cat_temperos, 'uni'),
-    ('Lemon pepper',             cat_temperos, 'pct'),
-    ('Maionese',                 cat_temperos, 'uni'),
-    ('Mel',                      cat_temperos, 'uni'),
-    ('Molho de pimenta',         cat_temperos, 'uni'),
-    ('Molho inglês',             cat_temperos, 'uni'),
-    ('Molho shoyu',              cat_temperos, 'uni'),
-    ('Mostarda',                 cat_temperos, 'uni'),
-    ('Noz moscada',              cat_temperos, 'pct'),
-    ('Óleo de coco',             cat_temperos, 'uni'),
-    ('Óleo de soja',             cat_temperos, 'uni'),
-    ('Orégano',                  cat_temperos, 'pct'),
-    ('Pimenta do reino',         cat_temperos, 'pct'),
-    ('Sal refinado',             cat_temperos, 'Kg'),
-    ('Sal rosa',                 cat_temperos, 'pct'),
-    ('Tempero baiano',           cat_temperos, 'pct'),
-    ('Tomilho seco',             cat_temperos, 'pct'),
-    ('Vinagre de álcool',        cat_temperos, 'uni'),
-    ('Vinagre de maçã',          cat_temperos, 'uni')
-  ON CONFLICT DO NOTHING;
-
-  -- ENLATADOS E CONSERVAS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Atum em água',        cat_enlatados, 'uni'),
-    ('Atum em azeite',      cat_enlatados, 'uni'),
-    ('Ervilha lata',        cat_enlatados, 'uni'),
-    ('Milho lata',          cat_enlatados, 'uni'),
-    ('Palmito',             cat_enlatados, 'uni'),
-    ('Sardinha lata',       cat_enlatados, 'uni'),
-    ('Seleta de legumes',   cat_enlatados, 'uni')
+    ('Açafrão cúrcuma',    cat_temp, 'pct'), ('Azeite de oliva',   cat_temp, 'uni'),
+    ('Azeitona preta',     cat_temp, 'pct'), ('Azeitona verde',    cat_temp, 'pct'),
+    ('Canela em pó',       cat_temp, 'pct'), ('Colorau',           cat_temp, 'pct'),
+    ('Cominho',            cat_temp, 'pct'), ('Dendê',             cat_temp, 'L'),
+    ('Extrato de tomate',  cat_temp, 'uni'), ('Fermento em pó',    cat_temp, 'pct'),
+    ('Ketchup',            cat_temp, 'uni'), ('Maionese',          cat_temp, 'uni'),
+    ('Mel',                cat_temp, 'uni'), ('Molho de pimenta',  cat_temp, 'uni'),
+    ('Molho inglês',       cat_temp, 'uni'), ('Molho shoyu',       cat_temp, 'uni'),
+    ('Mostarda',           cat_temp, 'uni'), ('Óleo de coco',      cat_temp, 'uni'),
+    ('Óleo de soja',       cat_temp, 'uni'), ('Orégano',           cat_temp, 'pct'),
+    ('Pimenta do reino',   cat_temp, 'pct'), ('Sal refinado',      cat_temp, 'Kg'),
+    ('Tempero baiano',     cat_temp, 'pct'), ('Vinagre de álcool', cat_temp, 'uni'),
+    ('Vinagre de maçã',    cat_temp, 'uni')
   ON CONFLICT DO NOTHING;
 
   -- BEBIDAS
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Achocolatado',       cat_bebidas, 'uni'),
-    ('Água com gás',       cat_bebidas, 'uni'),
-    ('Água de coco',       cat_bebidas, 'uni'),
-    ('Água mineral',       cat_bebidas, 'uni'),
-    ('Café solúvel',       cat_bebidas, 'pct'),
-    ('Café torrado moído', cat_bebidas, 'pct'),
-    ('Chá verde',          cat_bebidas, 'pct'),
-    ('Energético',         cat_bebidas, 'uni'),
-    ('Kefir',              cat_bebidas, 'uni'),
-    ('Polpa de fruta',     cat_bebidas, 'pct'),
-    ('Refrigerante',       cat_bebidas, 'uni'),
-    ('Suco de laranja',    cat_bebidas, 'uni'),
-    ('Suco de uva integral', cat_bebidas, 'uni')
+    ('Achocolatado',        cat_bebidas, 'uni'), ('Água com gás',    cat_bebidas, 'uni'),
+    ('Água de coco',        cat_bebidas, 'uni'), ('Água mineral',    cat_bebidas, 'uni'),
+    ('Café solúvel',        cat_bebidas, 'pct'), ('Café torrado moído', cat_bebidas, 'pct'),
+    ('Chá verde',           cat_bebidas, 'pct'), ('Energético',      cat_bebidas, 'uni'),
+    ('Polpa de fruta',      cat_bebidas, 'pct'), ('Refrigerante',    cat_bebidas, 'uni'),
+    ('Suco de laranja',     cat_bebidas, 'uni'), ('Suco de uva integral', cat_bebidas, 'uni')
   ON CONFLICT DO NOTHING;
 
-  -- LANCHES E GULOSEIMAS
+  -- PADARIA E DOCES
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Amendoim',             cat_lanches, 'Kg'),
-    ('Amêndoa',              cat_lanches, 'pct'),
-    ('Barra de cereal',      cat_lanches, 'pct'),
-    ('Biscoito cream cracker', cat_lanches, 'pct'),
-    ('Biscoito Maizena',     cat_lanches, 'pct'),
-    ('Castanha de caju',     cat_lanches, 'Kg'),
-    ('Castanha do pará',     cat_lanches, 'Kg'),
-    ('Chocolate ao leite',   cat_lanches, 'uni'),
-    ('Chocolate 70%',        cat_lanches, 'uni'),
-    ('Farinha láctea',       cat_lanches, 'pct'),
-    ('Gelatina',             cat_lanches, 'pct'),
-    ('Granola',              cat_lanches, 'pct'),
-    ('Linhaça',              cat_lanches, 'pct'),
-    ('Nozes',                cat_lanches, 'pct'),
-    ('Paçoca',               cat_lanches, 'pct'),
-    ('Pão de forma',         cat_lanches, 'uni'),
-    ('Pão integral',         cat_lanches, 'uni'),
-    ('Torradas',             cat_lanches, 'pct')
+    ('Amendoim',             cat_padaria, 'Kg'),  ('Amêndoa',        cat_padaria, 'pct'),
+    ('Barra de cereal',      cat_padaria, 'pct'), ('Biscoito cream cracker', cat_padaria, 'pct'),
+    ('Biscoito Maizena',     cat_padaria, 'pct'), ('Castanha de caju', cat_padaria, 'Kg'),
+    ('Castanha do pará',     cat_padaria, 'Kg'),  ('Chocolate ao leite', cat_padaria, 'uni'),
+    ('Chocolate 70%',        cat_padaria, 'uni'), ('Granola',         cat_padaria, 'pct'),
+    ('Paçoca',               cat_padaria, 'pct'), ('Pão de forma',    cat_padaria, 'uni'),
+    ('Pão integral',         cat_padaria, 'uni'), ('Torradas',        cat_padaria, 'pct')
   ON CONFLICT DO NOTHING;
 
   -- LIMPEZA
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Água sanitária',       cat_limpeza, 'uni'),
-    ('Álcool 70% gel',       cat_limpeza, 'uni'),
-    ('Álcool 70% líquido',   cat_limpeza, 'uni'),
-    ('Amaciante',            cat_limpeza, 'uni'),
-    ('Desengordurante',      cat_limpeza, 'uni'),
-    ('Desinfetante',         cat_limpeza, 'uni'),
-    ('Detergente',           cat_limpeza, 'uni'),
-    ('Esponja dupla face',   cat_limpeza, 'uni'),
-    ('Lã de aço',            cat_limpeza, 'pct'),
-    ('Limpa vidros',         cat_limpeza, 'uni'),
-    ('Multiuso spray',       cat_limpeza, 'uni'),
-    ('Pedra sanitária',      cat_limpeza, 'uni'),
-    ('Sabão de coco barra',  cat_limpeza, 'uni'),
-    ('Sabão em pó',          cat_limpeza, 'pct'),
-    ('Saco de lixo',         cat_limpeza, 'pct')
+    ('Água sanitária',     cat_limpeza, 'uni'), ('Álcool 70% gel',    cat_limpeza, 'uni'),
+    ('Álcool 70% líquido', cat_limpeza, 'uni'), ('Amaciante',         cat_limpeza, 'uni'),
+    ('Desinfetante',       cat_limpeza, 'uni'), ('Detergente',        cat_limpeza, 'uni'),
+    ('Esponja dupla face', cat_limpeza, 'uni'), ('Limpa vidros',      cat_limpeza, 'uni'),
+    ('Multiuso spray',     cat_limpeza, 'uni'), ('Sabão de coco barra', cat_limpeza, 'uni'),
+    ('Sabão em pó',        cat_limpeza, 'pct'), ('Saco de lixo',      cat_limpeza, 'pct')
   ON CONFLICT DO NOTHING;
 
-  -- HIGIENE PESSOAL
+  -- HIGIENE E CUIDADOS (Higiene Pessoal + Descartáveis)
   INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Absorvente',          cat_higiene, 'pct'),
-    ('Barbeador',           cat_higiene, 'uni'),
-    ('Condicionador',       cat_higiene, 'uni'),
-    ('Cotonete',            cat_higiene, 'pct'),
-    ('Creme dental',        cat_higiene, 'uni'),
-    ('Desodorante aerosol', cat_higiene, 'uni'),
-    ('Desodorante roll-on', cat_higiene, 'uni'),
-    ('Escova de dentes',    cat_higiene, 'uni'),
-    ('Fio dental',          cat_higiene, 'uni'),
-    ('Fraldas',             cat_higiene, 'pct'),
-    ('Lenço umedecido',     cat_higiene, 'pct'),
-    ('Papel higiênico',     cat_higiene, 'pct'),
-    ('Sabonete barra',      cat_higiene, 'uni'),
-    ('Sabonete líquido',    cat_higiene, 'uni'),
-    ('Shampoo',             cat_higiene, 'uni')
-  ON CONFLICT DO NOTHING;
-
-  -- DESCARTÁVEIS E OUTROS
-  INSERT INTO produtos (nome, categoria_id, unidade_padrao) VALUES
-    ('Coador de café',        cat_descartaveis, 'uni'),
-    ('Filme plástico',        cat_descartaveis, 'uni'),
-    ('Papel alumínio',        cat_descartaveis, 'uni'),
-    ('Papel manteiga',        cat_descartaveis, 'uni'),
-    ('Papel toalha',          cat_descartaveis, 'pct'),
-    ('Prato descartável',     cat_descartaveis, 'pct'),
-    ('Saco plástico',         cat_descartaveis, 'pct'),
-    ('Talheres descartáveis', cat_descartaveis, 'pct')
+    ('Absorvente',         cat_higiene, 'pct'), ('Condicionador',     cat_higiene, 'uni'),
+    ('Creme dental',       cat_higiene, 'uni'), ('Desodorante aerosol', cat_higiene, 'uni'),
+    ('Desodorante roll-on', cat_higiene, 'uni'),('Escova de dentes',  cat_higiene, 'uni'),
+    ('Fio dental',         cat_higiene, 'uni'), ('Fraldas',           cat_higiene, 'pct'),
+    ('Lenço umedecido',    cat_higiene, 'pct'), ('Papel higiênico',   cat_higiene, 'pct'),
+    ('Papel toalha',       cat_higiene, 'pct'), ('Sabonete barra',    cat_higiene, 'uni'),
+    ('Sabonete líquido',   cat_higiene, 'uni'), ('Shampoo',           cat_higiene, 'uni'),
+    ('Filme plástico',     cat_higiene, 'uni'), ('Papel alumínio',    cat_higiene, 'uni')
   ON CONFLICT DO NOTHING;
 
 END $$;
