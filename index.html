@@ -605,6 +605,11 @@ html.dark option{background:#1a1d27;color:var(--text)}
 const SUPABASE_URL = 'https://mnvsxesmyzhbktgjolne.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_aSU5COfoIPe9rkPbTecK9Q_bx5ptdT8';
 
+// URL da Edge Function para leitura confiável da NFC-e (servidor-a-servidor, sem CORS).
+// Após rodar "supabase functions deploy scrape-nfce", cole a URL aqui.
+// Deixe '' para usar os proxies públicos (menos confiável).
+const NFCE_FUNCTION_URL = '';
+
 // ================================================================
 //  STATE
 // ================================================================
@@ -1011,36 +1016,65 @@ function processNFCeFromInput() {
 
 async function processNFCeURL(url) {
   toast('Buscando nota fiscal...', 'info');
-  const chave = extractChaveNFCe(url);
-  let html = null;
 
-  // Tenta 2 proxies diferentes
+  const chave    = extractChaveNFCe(url);
+  // Garante que %7C seja decodificado para | antes de repassar para proxies
+  const cleanUrl = url.includes('%7C') || url.includes('%7c')
+    ? decodeURIComponent(url) : url;
+
+  // ── 1. Supabase Edge Function (mais confiável — servidor para servidor) ──
+  if (NFCE_FUNCTION_URL) {
+    try {
+      const res = await fetch(NFCE_FUNCTION_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({ url: cleanUrl }),
+        signal: AbortSignal.timeout(20000)
+      });
+      if (res.ok) {
+        const dados = await res.json();
+        if (dados?.itens?.length) { mostrarConfirmacaoNFCe(dados); return; }
+      }
+    } catch(e) { console.warn('[NFC-e] Edge function falhou:', e); }
+  }
+
+  // ── 2. Proxies CORS públicos (fallback) ──
+  // A página da SEFAZ AM usa charset=ISO-8859-1; usamos ArrayBuffer + TextDecoder
   const proxies = [
-    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
-    `https://corsproxy.io/?${encodeURIComponent(url)}`
+    { url: `https://api.allorigins.win/raw?url=${encodeURIComponent(cleanUrl)}`,  decode: true  },
+    { url: `https://api.allorigins.win/get?url=${encodeURIComponent(cleanUrl)}`,  decode: false },
+    { url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(cleanUrl)}`, decode: true },
+    { url: `https://corsproxy.io/?${encodeURIComponent(cleanUrl)}`,               decode: true  },
   ];
 
+  let html = null;
   for (const proxy of proxies) {
     try {
-      const res = await fetch(proxy, { signal: AbortSignal.timeout(15000) });
-      if (proxy.includes('allorigins')) {
-        const json = await res.json();
-        html = json.contents;
+      const res = await fetch(proxy.url, { signal: AbortSignal.timeout(18000) });
+      if (!res.ok) { console.warn('[NFC-e] proxy retornou', res.status, proxy.url); continue; }
+
+      if (proxy.decode) {
+        const buf = await res.arrayBuffer();
+        html = new TextDecoder('iso-8859-1').decode(buf);
       } else {
-        html = await res.text();
+        const json = await res.json();
+        html = json.contents || null;
       }
-      if (html && html.length > 500) break;
-    } catch(e) { /* tenta próximo */ }
+
+      if (html && html.includes('tabResult')) break; // encontrou a tabela certa
+      html = null;
+    } catch(e) { console.warn('[NFC-e] proxy erro:', proxy.url, e?.message); }
   }
 
   if (!html) {
-    toast('Não foi possível buscar a nota. Tente novamente.', 'error');
+    toast('Não foi possível buscar a nota. Verifique sua conexão ou use a Edge Function.', 'error');
     return;
   }
 
   const dados = parseNFCeHTML(html, chave, url);
-  if (!dados || !dados.itens.length) {
-    toast('Não foi possível ler os produtos da nota.', 'error');
+  if (!dados?.itens?.length) {
+    toast('HTML obtido mas nenhum produto encontrado. Abra o console (F12) para detalhes.', 'error');
+    console.error('[NFC-e] HTML recebido:', html.slice(0, 2000));
     return;
   }
   mostrarConfirmacaoNFCe(dados);
@@ -1048,105 +1082,63 @@ async function processNFCeURL(url) {
 
 function extractChaveNFCe(url) {
   try {
-    const p = new URL(url).searchParams.get('p') || url;
-    return p.split('|')[0].replace(/\D/g,'').slice(0,44);
+    const decoded = decodeURIComponent(url);
+    const p = new URL(decoded).searchParams.get('p') || decoded;
+    return p.split('|')[0].replace(/\D/g, '').slice(0, 44);
   } catch { return ''; }
 }
 
+// Parser específico para o portal SEFAZ AM (nfceweb)
+// Seletores verificados na estrutura real da página em 01/05/2026.
 function parseNFCeHTML(html, chave, urlOriginal) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const itens = [];
 
-  // Estratégia 1: tabela com colunas padrão NFC-e
-  const tables = doc.querySelectorAll('table');
-  let prodTable = null;
-  for (const t of tables) {
-    const headers = [...t.querySelectorAll('th')].map(th => th.textContent.trim().toLowerCase());
-    if (headers.some(h => h.includes('qtd') || h.includes('descri'))) {
-      prodTable = t; break;
+  // ── Produtos: #tabResult tr[id^="Item"] ──
+  doc.querySelectorAll('#tabResult tr[id^="Item"]').forEach(row => {
+    const nome      = row.querySelector('span.txtTit')?.textContent?.trim() ?? '';
+    const qtdRaw    = row.querySelector('span.Rqtd')?.textContent?.replace(/Qtde\.?:?\s*/i, '').trim() ?? '0';
+    const unRaw     = row.querySelector('span.RUN')?.textContent?.replace(/UN:?\s*/i, '').trim() ?? 'UN';
+    const unitRaw   = row.querySelector('span.RvlUnit')?.textContent?.replace(/Vl\. Unit\.?:?\s*/i, '').trim() ?? '0';
+    const totalRaw  = row.querySelector('span.valor')?.textContent?.trim() ?? '0';
+
+    const quantidade     = parseMoeda(qtdRaw);
+    const unidade        = unRaw.replace(/\s+/g, '').toUpperCase() || 'UN';
+    const preco_unitario = parseMoeda(unitRaw);
+    const preco_total    = parseMoeda(totalRaw);
+
+    if (nome && quantidade > 0) {
+      itens.push({ nome: nome.toUpperCase(), quantidade, unidade, preco_unitario, preco_total });
     }
-  }
+  });
 
-  if (prodTable) {
-    const rows = prodTable.querySelectorAll('tbody tr');
-    rows.forEach(row => {
-      const cells = [...row.querySelectorAll('td')].map(td => td.textContent.trim());
-      if (cells.length < 4) return;
-      // Tenta identificar colunas por posição (código, descrição, qtd, un, unit, total)
-      const item = tryParseRow(cells);
-      if (item) itens.push(item);
-    });
-  }
+  // ── Loja: div.txtTopo ──
+  const loja = doc.querySelector('.txtTopo')?.textContent?.trim() ?? 'Loja não identificada';
 
-  // Estratégia 2: divs com padrões de texto (SEFAZ AM usa JSP com divs)
-  if (!itens.length) {
-    const allText = doc.body?.textContent || '';
-    const lines = allText.split('\n').map(l => l.trim()).filter(Boolean);
-    let i = 0;
-    while (i < lines.length) {
-      // Procura padrão: "Qtde.: X" seguido de preço
-      if (/qtd[e.]?[:.]?\s*\d/i.test(lines[i])) {
-        const nome = lines[i-1] || '';
-        const qtyMatch = lines[i].match(/([\d,]+)/);
-        const unMatch  = lines[i+1] || '';
-        const totMatch = lines[i+2] || '';
-        const precMatch = lines[i+3] || '';
-        if (qtyMatch) {
-          itens.push({
-            nome: nome.toUpperCase(),
-            quantidade: parseFloat(qtyMatch[1].replace(',','.')),
-            unidade: unMatch.replace(/[^A-Za-z]/g,'').toUpperCase() || 'UN',
-            preco_unitario: parseMoeda(totMatch),
-            preco_total: parseMoeda(precMatch)
-          });
-        }
-      }
-      i++;
+  // ── CNPJ: primeiro div.text depois de .txtTopo ──
+  let cnpj = '';
+  doc.querySelectorAll('.text').forEach(el => {
+    const m = el.textContent.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
+    if (m && !cnpj) cnpj = m[0];
+  });
+
+  // ── Data e número NF: div#infos ──
+  const infos = doc.getElementById('infos')?.textContent ?? '';
+  const dataMatch = infos.match(/Emiss[aã]o:?\s*(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/i);
+  const data = dataMatch?.[1] ?? '';
+
+  // ── Valor a pagar: div#linhaTotal com label "Valor a pagar" ──
+  let total = 0;
+  doc.querySelectorAll('#linhaTotal, .linhaShade').forEach(div => {
+    if (/[Vv]alor\s+[Aa]\s+[Pp]agar/.test(div.textContent)) {
+      const v = parseMoeda(div.querySelector('.totalNumb')?.textContent ?? '');
+      if (v > 0) total = v;
     }
-  }
+  });
+  // Fallback: span.totalNumb.txtMax
+  if (!total) total = parseMoeda(doc.querySelector('.totalNumb.txtMax')?.textContent ?? '');
 
-  // Extrai info da loja
-  const textoCompleto = doc.body?.textContent || '';
-  const loja  = extractText(doc, ['.razao-social','.txtNome','[class*="razao"]','[class*="nome"]']) ||
-                textoCompleto.match(/([A-Z ]{10,}S\/A|LTDA|EIRELI|ME)/)?.[0] || 'Loja não identificada';
-  const cnpj  = textoCompleto.match(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/)?.[0] || '';
-  const data  = textoCompleto.match(/(\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}:\d{2})/)?.[0] || '';
-  const total = parseMoeda(textoCompleto.match(/[Vv]alor\s+[Aa]\s+[Pp]agar.*?([\d.,]+)/)?.[1] || '') ||
-                parseMoeda(textoCompleto.match(/[Tt]otal.*?([\d.,]+)/)?.[1] || '');
-
-  return { loja: loja.trim(), cnpj, data, total, chave, urlOriginal, itens };
-}
-
-function tryParseRow(cells) {
-  // Padrão comum: [idx?, codigo?, descricao, qtd, un, vl_unit, vl_total]
-  // Tenta identificar por conteúdo
-  let nome = '', qty = 0, un = 'UN', unit_p = 0, total_p = 0;
-
-  for (let i = 0; i < cells.length; i++) {
-    const c = cells[i];
-    if (/^\d+[,.]?\d*$/.test(c) && !qty && parseFloat(c.replace(',','.')) < 9999) {
-      qty = parseFloat(c.replace(',','.'));
-    } else if (/^(kg|un|pc|pct|lt|l|fr|la|g|cx|frd?)$/i.test(c) && !un) {
-      un = c.toUpperCase();
-    } else if (c.length > 3 && /[A-Za-zÀ-ú]/.test(c) && !nome) {
-      nome = c;
-    } else if (/[\d,.]+/.test(c) && !unit_p) {
-      unit_p = parseMoeda(c);
-    } else if (/[\d,.]+/.test(c) && !total_p) {
-      total_p = parseMoeda(c);
-    }
-  }
-
-  if (!nome || !qty) return null;
-  return { nome: nome.toUpperCase(), quantidade: qty, unidade: un, preco_unitario: unit_p, preco_total: total_p || qty * unit_p };
-}
-
-function extractText(doc, selectors) {
-  for (const sel of selectors) {
-    const el = doc.querySelector(sel);
-    if (el?.textContent.trim()) return el.textContent.trim();
-  }
-  return '';
+  return { loja, cnpj, data, total, chave, urlOriginal, itens };
 }
 
 function parseMoeda(str) {
