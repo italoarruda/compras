@@ -25,7 +25,7 @@ DECLARE
   old_embutidos    UUID; old_ovos    UUID;
   old_graos        UUID; old_farinhas UUID; old_massas  UUID;
   old_enlatados    UUID; old_lanches UUID;
-  old_descartaveis UUID;
+  old_higiene_old  UUID; old_descartaveis UUID;
   -- novas
   new_horti    UUID; new_carnes UUID; new_mercea   UUID;
   new_padaria  UUID; new_higiene UUID;
@@ -44,6 +44,7 @@ BEGIN
   SELECT id INTO old_massas       FROM categorias WHERE nome = 'Massas';
   SELECT id INTO old_enlatados    FROM categorias WHERE nome = 'Enlatados e Conservas';
   SELECT id INTO old_lanches      FROM categorias WHERE nome = 'Lanches e Guloseimas';
+  SELECT id INTO old_higiene_old  FROM categorias WHERE nome = 'Higiene Pessoal';
   SELECT id INTO old_descartaveis FROM categorias WHERE nome = 'Descartáveis e Outros';
 
   -- busca IDs das novas categorias
@@ -70,8 +71,8 @@ BEGIN
   UPDATE itens_compra SET categoria_id = new_padaria  WHERE categoria_id = old_lanches;
 
   -- Higiene e Cuidados ← Higiene Pessoal + Descartáveis e Outros
-  UPDATE produtos     SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
-  UPDATE itens_compra SET categoria_id = new_higiene  WHERE categoria_id = old_descartaveis;
+  UPDATE produtos     SET categoria_id = new_higiene  WHERE categoria_id IN (old_higiene_old, old_descartaveis);
+  UPDATE itens_compra SET categoria_id = new_higiene  WHERE categoria_id IN (old_higiene_old, old_descartaveis);
 
   -- Remove todas as categorias antigas (as novas já foram inseridas no passo 1)
   DELETE FROM categorias WHERE nome IN (
