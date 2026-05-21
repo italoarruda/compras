@@ -1,0 +1,9 @@
+{
+  "name": "compras",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node tests/validation.test.js",
+    "test:watch": "node --watch tests/validation.test.js"
+  }
+}
